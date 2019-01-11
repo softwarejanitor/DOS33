@@ -1,0 +1,12 @@
+TODO:
+
+catalog -- mostly working
+read -- mostly working for simple text files
+write
+umlock
+lock
+rename
+delete
+copy
+disk zap/sector editor
+

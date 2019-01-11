@@ -1,0 +1,21 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+use DOS33;
+
+my $debug = 0;
+
+while (defined $ARGV[0] && $ARGV[0] =~ /^-/) {
+  if ($ARGV[0] eq '-d') {
+    $debug = 1;
+    shift;
+  }
+}
+
+my $dskfile = shift or die "Must supply filename\n";
+
+freemap($dskfile, $debug);
+
+1;
+
