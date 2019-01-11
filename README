@@ -8,5 +8,5 @@ lock
 rename
 delete
 copy
-disk zap/sector editor
+disk zap/sector editor -- partially working
 
