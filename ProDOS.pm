@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-package PRODOS;
+package ProDOS;
 
 use strict;
 
@@ -36,8 +36,7 @@ my $key_vol_dir_blk = 2;
 # 27-28 BIT_MAP_POINTER
 # 29-2a TOTAL_BLOCKS
 #
-my $vol_dir_blk_tmpl = 'CCCCa252';
-my $vol_dir_hdr_tmpl = 'Ca15x8nnCCCCCnnn';
+my $vol_dir_blk_tmpl = 'vvCa15x8nnCCCCCvvv';
 
 #
 # Volume Bit Map
@@ -97,6 +96,54 @@ my $vol_bit_map_tmpl = 'C*';
 # 25-26 HEADER_POINTER
 #
 my $file_desc_ent_tmpl = 'Ca15CnnnnnCCCa8nnCC';
+
+# Parse a Volume Directory Block
+sub parse_vol_dir_blk {
+  my ($buf, $dbg) = @_;
+
+  $debug = 1 if defined $dbg && $dbg;
+
+  my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $volume_name, $creation_yymmdd, $creation_hhmm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $bit_map_pointer, $total_blocks) = unpack $vol_dir_blk_tmpl, $buf;
+
+  my $name_length = $storage_type_name_length & 0x0f;
+  if ($debug) {
+    print sprintf("prv_vol_dir_blk=%04x\n", $prv_vol_dir_blk);
+    print sprintf("nxt_vol_dir_blk=%04x\n", $nxt_vol_dir_blk);
+    print sprintf("storage_type_name_length=%02x\n", $storage_type_name_length);
+    print sprintf("name_length=%02x\n", $name_length);
+    print sprintf("volume_name=%s\n", $volume_name);
+    print sprintf("volume_name=%s\n", substr($volume_name, 0, $name_length));
+    print sprintf("creation=%04x%04x\n", $creation_yymmdd, $creation_hhmm);
+    print sprintf("version=%02x\n", $version);
+    print sprintf("min_version=%02x\n", $min_version);
+    print sprintf("access=%02x\n", $access);
+    print sprintf("entry_length=%02x\n", $entry_length);
+    print sprintf("entries_per_block=%02x\n", $entries_per_block);
+    print sprintf("file_count=%04x\n", $file_count);
+    print sprintf("bit_map_pointer=%04x\n", $bit_map_pointer);
+    print sprintf("total_blocks=%02x\n", $total_blocks);
+  }
+
+  return $prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $volume_name, $creation_yymmdd, $creation_hhmm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $bit_map_pointer, $total_blocks;
+}
+
+#
+# Get Volume Directory Block
+#
+sub get_vol_dir_blk {
+  my ($pofile, $dbg) = @_;
+
+  $debug = 1 if defined $dbg && $dbg;
+
+  my $buf;
+
+  if (read_blk($pofile, $key_vol_dir_blk, \$buf)) {
+    dump_blk($buf) if $debug;
+    return parse_vol_dir_blk($buf, $debug);
+  }
+
+  return 0;
+}
 
 1;
 

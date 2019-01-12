@@ -84,7 +84,7 @@ sub dump_sec {
       if (($a > 32) && ($a < 127)) {
         print sprintf(" %c ", $a);
       } else {
-        print "  ";
+        print "   ";
       }
     }
     print "\n";
