@@ -4,7 +4,7 @@ package PRODOS;
 
 use strict;
 
-use DSK;
+use PO;
 
 use Exporter::Auto;
 
@@ -37,12 +37,12 @@ my $key_vol_dir_blk = 2;
 # 29-2a TOTAL_BLOCKS
 #
 my $vol_dir_blk_tmpl = 'CCCCa252';
-my $vol_dir_hdr_tmpl = '';
+my $vol_dir_hdr_tmpl = 'Ca15x8nnCCCCCnnn';
 
 #
 # Volume Bit Map
 #
-my $vol_bit_map_tmpl = '';
+my $vol_bit_map_tmpl = 'C*';
 
 #
 # File Descriptive Entries
@@ -96,11 +96,7 @@ my $vol_bit_map_tmpl = '';
 # 21-24 LAST_MOD
 # 25-26 HEADER_POINTER
 #
-my $file_desc_ent_tmpl = '';
-
-sub read_blk {
-  my ($dskfile) = @_;
-}
+my $file_desc_ent_tmpl = 'Ca15CnnnnnCCCa8nnCC';
 
 1;
 
