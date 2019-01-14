@@ -168,49 +168,24 @@ for (my $i = 0; $i < 12; $i++) {
 sub date_convert {
   my ($ymd, $hm) = @_;
 
-  #my $cr1 = unpack "b16", hex($ymd);
-
-  #print "cr1=$cr1\n";
-
-  #my $yy = substr($cr1, 0, 7);
-  #print "yy=$yy\n";
-  #my $year = oct('0b' . $yy);
-  #print "year=$year\n";
-  #my $mm = substr($cr1, 7, 4);
-  #print "mm=$mm\n";
-  #my $mon = oct('0b' . $mm);
-  #print "mon=$mon\n";
-  #my $dd = substr($cr1, 11, 5);
-  #print "dd=$dd\n";
-  #my $day = oct('0b' . $dd);
-  #print "day=$day\n";
-
-  #my $cr2 = unpack "B16", $hm;
-
-  #print "cr2=$cr2\n";
-
-  #my $hh = substr($cr2, 3, 5);
-  #my $hour = oct('0b' . $hh);
-  #print "hour=$hour\n";
-  #my $mm = substr($cr2, 10, 6);
-  #my $min = oct('0b' . $mm);
-  #print "min=$min\n";
+  return "<NO DATE>" unless (defined $ymd && defined $hm && $ymd != 0);
 
   my $year = ($ymd & 0xfe00) >> 9;  # bits 9-15
-  my $mon = (($ymd & 0x01e0) >> 5) - 1;  # bits 5-8
+  #print "year=$year\n";
+  my $mon = (($ymd & 0x01e0) >> 5 - 1);  # bits 5-8
+  $mon++;
+  #print "mon=$mon\n";
   my $day = $ymd & 0x001f;  # bits 0-4
+  #print "day=$day\n";
   my $hour = ($hm & 0x1f00) >> 8;  # bits 8-12
+  #print "hour=$hour\n";
   my $min = $hm & 0x003f;  # bits 0-5
+  #print "min=$min\n";
+  $mon = 0 if $mon > 12;
 
-  return "<NO DATE>" if $day < 1;
+  return "<NO DATE>" if $mon < 1;
 
-  #$year += 1970;
-  $mon = 1 if $mon < 1;
-  $day = 1 if $day < 1;
-  #$year += 2000 if ($year < 50);
-  #$year += 1900 if ($year < 100);
-
-  return sprintf("%-2d-%s-%02d %2d:%02d", $day, $months{$mon}, $year, $hour, $min);
+  return sprintf("%2d-%s-%02d %2d:%02d", $day, $months{$mon}, $year, $hour, $min);
 }
 
 # Parse Key Volume Directory Block
@@ -452,7 +427,6 @@ sub cat {
   my $vol_dir_blk = $nxt_vol_dir_blk;
 
   while ($vol_dir_blk) {
-    #my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $volume_name, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $bit_map_pointer, $total_blocks, @files) = get_vol_dir_blk($pofile, $vol_dir_blk, $debug);
     my ($prv_vol_dir_blk, $nxt_vol_dir_blk, @files) = get_vol_dir_blk($pofile, $vol_dir_blk, $debug);
     foreach my $file (@files) {
       my $lck = ' ';
