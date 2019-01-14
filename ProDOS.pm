@@ -271,6 +271,9 @@ print"\n";
     print sprintf("blocks_used=%04x\n", $blocks_used) if $debug;
     my $eof = shift @flds;
     #print sprintf("eof=%04x\n", $eof);
+    my ($e1, $e2, $e3)  = unpack "C*", $eof;
+    my $endfile = (($e3 << 16) + ($e2 << 8) + $e1);
+    print sprintf("eof=%06x\n", $endfile) if $debug;
     my $creation_ymd = shift @flds;
     print sprintf("creation_ymd=%04x\n", $creation_ymd) if $debug;
     my $creation_hm = shift @flds;
@@ -285,6 +288,10 @@ print"\n";
     print sprintf("access=%02x\n", $access) if $debug;
     my $aux_type = shift @flds;
     print sprintf("aux_type=%02x\n", $aux_type) if $debug;
+    my $atype = '';
+    if ($file_type == 0x06) {
+      $atype = sprintf("A=\$%04X", $aux_type);
+    }
     my $last_mod_ymd = shift @flds;
     print sprintf("last_mod_ymd=%04x\n", $last_mod_ymd) if $debug;
     my $last_mod_hm = shift @flds;
@@ -294,7 +301,7 @@ print"\n";
     print sprintf("header_pointer=%04x\n", $header_pointer) if $debug;
     if ($storage_type != 0) {
       #print "pushing $file_name\n";
-      push @files, { 'filename' => $fname, 'ftype' => $ftype{$file_type}, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type };
+      push @files, { 'filename' => $fname, 'ftype' => $ftype{$file_type}, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile };
     }
   }
 
@@ -358,6 +365,9 @@ sub parse_vol_dir_blk {
     print sprintf("blocks_used=%04x\n", $blocks_used) if $debug;
     my $eof = shift @flds;
     #print sprintf("eof=%04x\n", $eof);
+    my ($e1, $e2, $e3)  = unpack "C*", $eof;
+    my $endfile = (($e3 << 16) + ($e2 << 8) + $e1);
+    print sprintf("eof=%06x\n", $endfile) if $debug;
     my $creation_ymd = shift @flds;
     print sprintf("creation_ymd=%04x\n", $creation_ymd) if $debug;
     my $creation_hm = shift @flds;
@@ -372,6 +382,10 @@ sub parse_vol_dir_blk {
     print sprintf("access=%02x\n", $access) if $debug;
     my $aux_type = shift @flds;
     print sprintf("aux_type=%02x\n", $aux_type) if $debug;
+    my $atype = '';
+    if ($file_type == 0x06) {
+      $atype = sprintf("A=\$%04X", $aux_type);
+    }
     my $last_mod_ymd = shift @flds;
     print sprintf("last_mod_ymd=%04x\n", $last_mod_ymd) if $debug;
     my $last_mod_hm = shift @flds;
@@ -381,7 +395,7 @@ sub parse_vol_dir_blk {
     print sprintf("header_pointer=%04x\n", $header_pointer) if $debug;
     if ($storage_type != 0) {
       #print "pushing $file_name\n";
-      push @files, { 'filename' => $fname, 'ftype' => $ftype{$file_type}, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type };
+      push @files, { 'filename' => $fname, 'ftype' => $ftype{$file_type}, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile };
     }
   }
 
@@ -410,6 +424,46 @@ sub get_vol_dir_blk {
   }
 
   return 0;
+}
+
+#
+# Get disk catalog.
+#
+sub cat {
+  my ($pofile, $dbg) = @_;
+
+  $debug = 1 if defined $dbg && $dbg;
+
+  my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $volume_name, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $bit_map_pointer, $total_blocks, @files) = get_key_vol_dir_blk($pofile, $debug);
+
+  print "/$volume_name\n\n";
+
+  print " NAME           TYPE  BLOCKS  MODIFIED         CREATED          ENDFILE SUBTYPE\n\n";
+
+  foreach my $file (@files) {
+    my $lck = ' ';
+    #print printf("access=%02x\n", $file->{'access'});
+    if ($file->{'access'} == 0x01) {
+      $lck = '*';
+    }
+    print sprintf("%s%-15s %3s %7d %16s %16s  %7s %s\n", $lck, $file->{'filename'}, $file->{'ftype'}, $file->{'used'}, $file->{'mdate'}, $file->{'cdate'}, $file->{'eof'}, $file->{'atype'});
+  }
+
+  my $vol_dir_blk = $nxt_vol_dir_blk;
+
+  while ($vol_dir_blk) {
+    #my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $volume_name, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $bit_map_pointer, $total_blocks, @files) = get_vol_dir_blk($pofile, $vol_dir_blk, $debug);
+    my ($prv_vol_dir_blk, $nxt_vol_dir_blk, @files) = get_vol_dir_blk($pofile, $vol_dir_blk, $debug);
+    foreach my $file (@files) {
+      my $lck = ' ';
+      #print printf("access=%02x\n", $file->{'access'});
+      if ($file->{'access'} == 0x01) {
+        $lck = '*';
+      }
+      print sprintf("%s%-15s %3s %7d %16s %16s  %7s %s\n", $lck, $file->{'filename'}, $file->{'ftype'}, $file->{'used'}, $file->{'mdate'}, $file->{'cdate'}, $file->{'eof'}, $file->{'atype'});
+    }
+    $vol_dir_blk = $nxt_vol_dir_blk;
+  }
 }
 
 1;
