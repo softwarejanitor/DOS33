@@ -20,28 +20,314 @@ my %ftype = (
   0x04 => 'TXT',
   # 06    BIN Binary file (8-bit binary image)
   0x06 => 'BIN',
-  # 0f    DIR Directory file
+  # 07    FNT Apple /// Font
+  0x07 => 'FNT',
+  # 08    FOT HiRes/Double HiRes Graphics
+  0x08 => 'FOT',
+  # 09    BA3 Apple III BASIC Program
+  0x09 => 'BA3',
+  # 0A    DA3 Apple III BASIC Data
+  0x0a => 'DA3',
+  # 0B    WPF Generic Word Processing
+  0x0b => 'WPF',
+  # 0C    SOS SOS System File
+  0x0c => 'SOS',
+  # f    DIR Directory file
   0x0f => 'DIR',
+
   # 19    ADB AppleWorks data base file
   0x19 => 'ADB',
   # 1a    AWP AppleWorks word processing file
   0x1a => 'AWP',
   # 1b    ASP AppleWorks spreadsheet file
   0x1b => 'ASP',
+
+  # $20 TDM Desktop Manager File
+  0x20 => 'TDM',
+  # $21 IPS Instant Pascal Source
+  0x21 => 'IPS',
+  # $22 UPV UCSD Pascal Volume
+  0x22 => 'UPV',
+  # $29 3SD SOS Directory
+  0x29 => '3SD',
+  # $2A 8SC Source Code
+  0x2a => '8SC',
+  # $2B 8OB Object Code
+  0x2b => '8OB',
+
+  # $2C 8IC Interpreted Code
+  0x2c => '8IC',
+  #     $8003 - Apex Program File
+
+  # $2D 8LD Language Data
+  0x2d => '8LD',
+  # $2E P8C ProDOS 8 Code Module
+  0x2e => 'P8C',
+
+  # $41 OCR Optical Character Recognition
+  0x41 => 'OCR',
+  # $42 FTD File Type Definitions
+  0x42 => 'FTD',
+
+  # $50 GWP Apple IIgs Word Processing
+  0x50 => 'GWP',
+  #    $5445 - Teach
+  #    $8001 - DeluxeWrite
+  #    $8010 - AppleWorks GS
+
+  # $51 GSS Apple IIgs Spreadsheet
+  0x51 => 'GSS',
+  #    $8010 - AppleWorks GS
+
+  # $52 GDB Apple IIgs Database
+  0x52 => 'GDB',
+  #    $8010 - AppleWorks GS
+  #    $8011 - AppleWorks GS Template
+  #    $8013 - GSAS
+
+  # $53 DRW Object Oriented Graphics
+  0x53 => 'DRW',
+  #    $8010 - AppleWorks GS
+
+  # $54 GDP Apple IIgs Desktop Publishing
+  0x54 => 'GDP',
+  #    $8002 - GraphicWriter
+  #    $8010 - AppleWorks GS
+
+  # $55 HMD HyperMedia
+  0x55 => 'HMD',
+  #    $0001 - HyperCard GS
+  #    $8001 - Tutor-Tech
+  #    $8002 - HyperStudio
+  #    $8003 - Nexus
+
+  # $56 EDU Educational Program Data
+  0x56 => 'EDU',
+  # $57 STN Stationery
+  0x57 => 'STN',
+  # $58 HLP Help File
+  0x58 => 'HLP',
+
+  # $59 COM Communications
+  0x59 => 'COM',
+  #    $8010 - AppleWorks GS
+
+  # $5A CFG Configuration
+  0x5a => 'CFG',
+  # $5B ANM Animation
+  0x5b => 'ANM',
+  # $5C MUM Multimedia
+  0x5c => 'MUM',
+  # $5D ENT Entertainment
+  0x5d => 'ENT',
+  # $5E DVU Development Utility
+  0x5e => 'DVU',
+
+  # $60 PRE PC Pre-Boot
+  0x60 => 'PRE',
+  # $6B BIO PC BIOS
+  0x6b => 'BIO',
+  # $66 NCF ProDOS File Navigator Command File
+  0x66 => 'NCF',
+  # $6D DVR PC Driver
+  0x6d => 'DVR',
+  # $6E PRE PC Pre-Boot
+  0x6e => 'PRE',
+  # $6F HDV PC Hard Disk Image
+  0x6f => 'HDV',
+
+  # $70 SN2 Sabine's Notebook 2.0
+  0x70 => 'SN2',
+  # $71 KMT
+  0x71 => 'KMT',
+  # $72 DSR
+  0x72 => 'DSR',
+  # $73 BAN
+  0x73 => 'BAN',
+  # $74 CG7
+  0x74 => 'CG7',
+  # $75 TNJ
+  0x75 => 'TNJ',
+  # $76 SA7
+  0x76 => 'SA7',
+  # $77 KES
+  0x77 => 'KES',
+  # $78 JAP
+  0x78 => 'JAP',
+  # $79 CSL
+  0x79 => 'CSL',
+  # $7A TME
+  0x7a => 'TME',
+  # $7B TLB
+  0x7b => 'TLB',
+  # $7C MR7
+  0x7c => 'MR7',
+
+  # $7D MLR Mika City
+  0x7d => 'MLR',
+  #    $005C - Script
+  #    $C7AB - Color Table
+  #    $CDEF - Character Definition
+
+  # $7E MMM
+  0x7e => 'MMM',
+  # $7F JCP
+  0x7f => 'JCP',
+
+  # $80 GES System File
+  0x80 => 'GES',
+  # $81 GEA Desk Accessory
+  0x81 => 'GEA',
+  # $82 GEO Application
+  0x82 => 'GEO',
+  # $83 GED Document
+  0x83 => 'GED',
+  # $84 GEF Font
+  0x84 => 'GEF',
+  # $85 GEP Printer Driver
+  0x85 => 'GEP',
+  # $86 GEI Input Driver
+  0x86 => 'GEI',
+  # $87 GEX Auxiliary Driver
+  0x87 => 'GEX',
+  # $89 GEV Swap File
+  0x89 => 'GEV',
+  # $8B GEC Clock Driver
+  0x8b => 'GEC',
+  # $8C GEK Interface Card Driver
+  0x8c => 'GEK',
+  # $8D GEW Formatting Data
+  0x8d => 'GEW',
+
+  # $A0 WP  WordPerfect
+  0xa0 => 'WP ',
+  # $AB GSB Apple IIgs BASIC Program
+  0xab => 'GSB',
+  # $AC TDF Apple IIgs BASIC TDF
+  0xac => 'TDF',
+  # $AD BDF Apple IIgs BASIC Data
+  0xad => 'BDF',
+
+  # $B0 SRC Apple IIgs Source Code
+  0xb0 => 'SRC',
+  # $B1 OBJ Apple IIgs Object Code
+  0xb1 => 'OBJ',
+  # $B2 LIB Apple IIgs Library
+  0xb2 => 'LIB',
+  # $B3 S16 Apple IIgs Application Program
+  0xb3 => 'S16',
+  # $B4 RTL Apple IIgs Runtime Library
+  0xb4 => 'RTL',
+  # $B5 EXE Apple IIgs Shell Script
+  0xb5 => 'EXE',
+  # $B6 PIF Apple IIgs Permanent INIT
+  0xb6 => 'PIF',
+  # $B7 TIF Apple IIgs Temporary INIT
+  0xb7 => 'TIF',
+  # $B8 NDA Apple IIgs New Desk Accessory
+  0xb8 => 'NDA',
+  # $B9 CDA Apple IIgs Classic Desk Accessory
+  0xb9 => 'CDA',
+  # $BA TOL Apple IIgs Tool
+  0xba => 'TOL',
+  # $BB DRV Apple IIgs Device Driver
+  0xbb => 'DRV',
+
+  # $BC LDF Apple IIgs Generic Load File
+  0xbc => 'LDF',
+  #    $4001 - Nifty List Module
+  #    $4002 - Super Info Module
+  #    $4004 - Twilight Module
+  #    $4083 - Marinetti Link Layer Module
+
+  # $BD FST Apple IIgs File System Translator
+  0xbd => 'FST',
+  # $BF DOC Apple IIgs Document
+  0xbf => 'DOC',
+
+  # $C0 PNT Apple IIgs Packed Super HiRes
+  0xc0 => 'PNT',
+  #    $0001 - Packed Super HiRes
+  #    $0002 - Apple Preferred Format
+  #    $0003 - Packed QuickDraw II PICT
+
+  # $C1 PIC Apple IIgs Super HiRes
+  0xc1 => 'PIC',
+  #    $0001 - QuickDraw PICT
+  #    $0002 - Super HiRes 3200
+
+  # $C2 ANI PaintWorks Animation
+  0xc2 => 'ANI',
+  # $C3 PAL PaintWorks Palette
+  0xc3 => 'PAL',
+  # $C5 OOG Object-Oriented Graphics
+  0xc5 => 'OOG',
+  # $C6 SCR Script
+  0xc6 => 'SCR',
+  # $C7 CDV Apple IIgs Control Panel
+  0xc7 => 'CDV',
+
+  # $C8 FON Apple IIgs Font
+  0xc8 => 'FON',
+  #    $0000 - QuickDraw Bitmap Font
+  #    $0001 - Pointless TrueType Font
+
+  # $C9 FND Apple IIgs Finder Data
+  0xc9 => 'FND',
+  # $CA ICN Apple IIgs Icon File
+  0xca => 'ICN',
+
+  # $D5 MUS Music
+  0xd5 => 'MUS',
+  # $D6 INS Instrument
+  0xd6 => 'INS',
+  # $D7 MDI MIDI
+  0xd7 => 'MDI',
+
+  # $D8 SND Apple IIgs Audio
+  0xd8 => 'SND',
+  #    $0000 - AIFF
+  #    $0001 - AIFF-C
+  #    $0002 - ASIF Instrument
+  #    $0003 - Sound Resource
+  #    $0004 - MIDI Synth Wave
+  #    $8001 - HyperStudio Sound
+
+  # $DB DBM DB Master Document
+  0xdb => 'DBM',
+  # $E0 LBR Archive
+  0xe0 => 'LBR',
+  #    $0000 - ALU
+  #    $0001 - AppleSingle
+  #    $0002 - AppleDouble Header
+  #    $0003 - AppleDouble Data
+  #    $8000 - Binary II
+  #    $8001 - AppleLink ACU
+  #    $8002 - ShrinkIt
+
+  # $E2 ATK AppleTalk Data
+  0xe2 => 'ATK',
+  #    $FFFF - EasyMount Alias
+
+  # $EE R16 EDASM 816 Relocatable Code
+  0xee => 'R16',
   # ef    PAS ProDOS PASCAL file
   0xef => 'PAS',
+
   # f0    CMD ProDOS added command file
   0xf0 => 'CMD',
   # f1-f8     User defined file types 1 through 8
-  0xf1 => 'UD1',
+  0xf1 => 'OVL',
   0xf2 => 'UD2',
   0xf3 => 'UD3',
   0xf4 => 'UD4',
-  0xf5 => 'UD5',
+  0xf5 => 'BAT',
   0xf6 => 'UD6',
   0xf7 => 'UD7',
-  0xf8 => 'UD8',
+  0xf8 => 'PRG',
+  # fa    INT Integer BASIC Program
   0xfa => 'INT',
+  # fb    IVR Integer BASIC Variables
   0xfb => 'IVR',
   # fc    BAS Applesoft BASIC program file
   0xfc => 'BAS',
