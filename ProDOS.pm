@@ -265,7 +265,7 @@ sub parse_key_vol_dir_blk {
     if ($storage_type != 0) {
       my $f_type = $ftype{$file_type};
       $f_type = sprintf("\$%02x", $file_type) unless defined $f_type;
-      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile };
+      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile, 'keyptr' => $key_pointer };
     }
   }
 
@@ -331,7 +331,7 @@ sub parse_vol_dir_blk {
     if ($storage_type != 0) {
       my $f_type = $ftype{$file_type};
       $f_type = sprintf("\$%02x", $file_type) unless defined $f_type;
-      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile };
+      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile, 'keyptr' => $key_pointer };
     }
   }
 
@@ -362,7 +362,7 @@ sub parse_subdir_hdr_blk {
 
   $debug = 1 if defined $dbg && $dbg;
 
-  my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $subdir_name, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $parent_pointer, $parent_entry, $parent_entry_length, $dir_ents) = unpack $subdir_hdr_blk_tmpl, $buf;
+  my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $subdir_name, $foo, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $parent_pointer, $parent_entry, $parent_entry_length, $dir_ents) = unpack $subdir_hdr_blk_tmpl, $buf;
 
   my $storage_type = $storage_type_name_length & 0xf0;
   my $name_length = $storage_type_name_length & 0x0f;
@@ -374,11 +374,16 @@ sub parse_subdir_hdr_blk {
   my @files = ();
   for (my $i = 0; $i < 12; $i++) {
     my $storage_type_name_length = shift @flds;
+    print sprintf("storage_type_name_length=%02x\n", $storage_type_name_length) if $debug;
     my $storage_type = $storage_type_name_length & 0xf0;
+    print sprintf("storage_type=%02x\n", $storage_type) if $debug;
     my $name_length = $storage_type_name_length & 0x0f;
+    print sprintf("name_length=%02x\n", $name_length) if $debug;
     my $file_name = shift @flds;
     my $fname = substr($file_name, 0, $name_length);
+    print sprintf("fname=%s\n", $fname) if $debug;
     my $file_type = shift @flds;
+    print sprintf("file_type=%02x\n", $file_type) if $debug;
     my $key_pointer = shift @flds;
     my $blocks_used = shift @flds;
     my $eof = shift @flds;
@@ -402,11 +407,11 @@ sub parse_subdir_hdr_blk {
     if ($storage_type != 0) {
       my $f_type = $ftype{$file_type};
       $f_type = sprintf("\$%02x", $file_type) unless defined $f_type;
-      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile };
+      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile, 'keyptr' => $key_pointer };
     }
   }
 
-  return $prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $subdir_name, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $parent_pointer, $parent_entry, $parent_entry_length, @files;
+  return $prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $subdir_nm, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $parent_pointer, $parent_entry, $parent_entry_length, @files;
 }
 
 sub get_subdir_hdr {
@@ -418,11 +423,32 @@ sub get_subdir_hdr {
 
   if (read_blk($pofile, $subdir_blk, \$buf)) {
     dump_blk($buf) if $debug;
-    dump_blk($buf);
     return parse_subdir_hdr_blk($buf, $debug);
   }
 
   return 0;
+}
+
+sub list_files {
+  my ($pofile, $pre, $dirname, $files) = @_;
+
+  print "$pre/$dirname\n";
+
+  foreach my $file (@{$files}) {
+    my $lck = ' ';
+    if ($file->{'access'} == 0x01) {
+      $lck = '*';
+    }
+    print sprintf("$pre%s%-15s %3s %7d %16s %16s  %7s %s\n", $lck, $file->{'filename'}, $file->{'ftype'}, $file->{'used'}, $file->{'mdate'}, $file->{'cdate'}, $file->{'eof'}, $file->{'atype'});
+
+    if ($file->{'ftype'} eq 'DIR') {
+      my $subdir_blk = $file->{'keyptr'};
+
+      my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $subdir_name, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $parent_pointer, $parent_entry, $parent_entry_length, @subfiles) = get_subdir_hdr($pofile, $subdir_blk, $debug);
+
+      list_files($pofile, '  ' . $pre, $subdir_name, \@subfiles);
+    }
+  }
 }
 
 #
@@ -445,6 +471,14 @@ sub cat {
       $lck = '*';
     }
     print sprintf("%s%-15s %3s %7d %16s %16s  %7s %s\n", $lck, $file->{'filename'}, $file->{'ftype'}, $file->{'used'}, $file->{'mdate'}, $file->{'cdate'}, $file->{'eof'}, $file->{'atype'});
+
+    if ($file->{'ftype'} eq 'DIR') {
+      my $subdir_blk = $file->{'keyptr'};
+
+      my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $subdir_name, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $parent_pointer, $parent_entry, $parent_entry_length, @subfiles) = get_subdir_hdr($pofile, $subdir_blk, $debug);
+      my $pre = '  ';
+      list_files($pofile, '  ' . $pre, $subdir_name, \@subfiles);
+    }
   }
 
   my $vol_dir_blk = $nxt_vol_dir_blk;
@@ -457,6 +491,15 @@ sub cat {
         $lck = '*';
       }
       print sprintf("%s%-15s %3s %7d %16s %16s  %7s %s\n", $lck, $file->{'filename'}, $file->{'ftype'}, $file->{'used'}, $file->{'mdate'}, $file->{'cdate'}, $file->{'eof'}, $file->{'atype'});
+
+      if ($file->{'ftype'} eq 'DIR') {
+        my $subdir_blk = $file->{'keyptr'};
+
+        my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $subdir_name, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $parent_pointer, $parent_entry, $parent_entry_length, @subfiles) = get_subdir_hdr($pofile, $subdir_blk, $debug);
+
+        my $pre = '  ';
+        list_files($pofile, '  ' . $pre, $subdir_name, \@subfiles);
+      }
     }
     $vol_dir_blk = $nxt_vol_dir_blk;
   }
