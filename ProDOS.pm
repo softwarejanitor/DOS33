@@ -12,27 +12,27 @@ my $debug = 0;
 
 # ProDOS file types
 my %ftype = (
-  #       00        Typeless file
+  # 00        Typeless file
   0x00 => '   ',
-  #       01    BAD Bad block(s) file
+  # 01    BAD Bad block(s) file
   0x01 => 'BAD',
-  #       04    TXT Text file (ASCII text, msb off)
+  # 04    TXT Text file (ASCII text, msb off)
   0x04 => 'TXT',
-  #       06    BIN Binary file (8-bit binary image)
+  # 06    BIN Binary file (8-bit binary image)
   0x06 => 'BIN',
-  #       0f    DIR Directory file
+  # 0f    DIR Directory file
   0x0f => 'DIR',
-  #       19    ADB AppleWorks data base file
+  # 19    ADB AppleWorks data base file
   0x19 => 'ADB',
-  #       1a    AWP AppleWorks word processing file
+  # 1a    AWP AppleWorks word processing file
   0x1a => 'AWP',
-  #       1b    ASP AppleWorks spreadsheet file
+  # 1b    ASP AppleWorks spreadsheet file
   0x1b => 'ASP',
-  #       ef    PAS ProDOS PASCAL file
+  # ef    PAS ProDOS PASCAL file
   0xef => 'PAS',
-  #       f0    CMD ProDOS added command file
+  # f0    CMD ProDOS added command file
   0xf0 => 'CMD',
-  #       f1-f8     User defined file types 1 through 8
+  # f1-f8     User defined file types 1 through 8
   0xf1 => 'UD1',
   0xf2 => 'UD2',
   0xf3 => 'UD3',
@@ -43,26 +43,26 @@ my %ftype = (
   0xf8 => 'UD8',
   0xfa => 'INT',
   0xfb => 'IVR',
-  #       fc    BAS Applesoft BASIC program file
+  # fc    BAS Applesoft BASIC program file
   0xfc => 'BAS',
-  #       fd    VAR Applesoft stored variables file
+  # fd    VAR Applesoft stored variables file
   0xfd => 'VAR',
-  #       fe    REL Relocatable object module file (EDASM)
+  # fe    REL Relocatable object module file (EDASM)
   0xfe => 'REL',
-  #       ff    SYS ProDOS system file
+  # ff    SYS ProDOS system file
   0xff => 'SYS',
 );
 
 my %months = (
-  1, 'JAN',
-  2, 'FEB',
-  3, 'MAR',
-  4, 'APR',
-  5, 'MAY',
-  6, 'JUN',
-  7, 'JUL',
-  8, 'AUG',
-  9, 'SEP',
+   1, 'JAN',
+   2, 'FEB',
+   3, 'MAR',
+   4, 'APR',
+   5, 'MAY',
+   6, 'JUN',
+   7, 'JUL',
+   8, 'AUG',
+   9, 'SEP',
   10, 'OCT',
   11, 'NOV',
   12, 'DEC',
@@ -158,36 +158,60 @@ my $vol_bit_map_tmpl = 'C*';
 my $file_desc_ent_tmpl = 'Ca15Cvva3vvCCCvvvv';
 
 my $key_dir_file_desc_ent_tmpl = '';
+my $subdir_hdr_file_desc_ent_tmpl = '';
 for (my $i = 0; $i < 12; $i++) {
   $key_dir_file_desc_ent_tmpl .= $file_desc_ent_tmpl;
+  $subdir_hdr_file_desc_ent_tmpl .= $file_desc_ent_tmpl;
 }
 
 my $dir_file_desc_ent_tmpl = '';
+my $subdir_file_desc_ent_tmpl = '';
 for (my $i = 0; $i < 12; $i++) {
   $dir_file_desc_ent_tmpl .= $file_desc_ent_tmpl;
+  $subdir_file_desc_ent_tmpl .= $file_desc_ent_tmpl;
 }
 
+#
+# Subdirectory Header
+#
+# 00-01 Previous Subdirectory Block
+# 02-03 Next Subdirectory Block
+#
+# 04    STORAGE_TYPE/NAME_LENGTH
+#       ex where x is length of SUBDIR NAME
+#
+# 05-13 SUBDIR_NAME
+# 14    Must contain $75
+# 15-1b Reserved for future use
+# 1c-1f CREATION
+#       0-1 yyyyyyymmmmddddd  year/month/day
+#       2-3 000hhhhh00mmmmmm  hours/minues
+# 20    VERSION
+# 21    MIN_VERSION
+# 22    ACCESS
+# 23    ENTRY_LENGTH
+# 24    ENTRIES_PER_BLOCK
+# 25-26 FILE_COUNT
+# 27-28 PARENT_POINTER
+# 29    PARENT_ENTRY
+# 2a    PARENT_ENTRY_LENGTH
+#
+my $subdir_hdr_blk_tmpl = 'vvCa15Cx7vvCCCCCvvCCa469';
+
+
+#
+# Convert a ProDOS date to DD-MMM-YY string.
+#
 sub date_convert {
   my ($ymd, $hm) = @_;
-
-  #my ($ymd1, $ymd2) = unpack "CC", $ymd;
-  #my ($hm1, $hm2) = unpack "CC", $hm;
-
-  #print sprintf("ymd=%02x%02s\n", $ymd1, $ymd2);
-  #print sprintf("hm%02x%02s\n", $hm, $hm);
 
   return "<NO DATE>" unless (defined $ymd && defined $hm && $ymd != 0);
 
   my $year = ($ymd & 0xfe00) >> 9;  # bits 9-15
-  #print "year=$year\n";
   my $mon = ($ymd & 0x01e0) >> 5;  # bits 5-8
-  #print "mon=$mon\n";
   my $day = $ymd & 0x001f;  # bits 0-4
-  #print "day=$day\n";
   my $hour = ($hm & 0x1f00) >> 8;  # bits 8-12
-  #print "hour=$hour\n";
   my $min = $hm & 0x003f;  # bits 0-5
-  #print "min=$min\n";
   $mon = 0 if $mon > 12;
 
   return "<NO DATE>" if $mon < 1;
@@ -204,94 +228,44 @@ sub parse_key_vol_dir_blk {
   my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $volume_name, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $bit_map_pointer, $total_blocks, $dir_ents) = unpack $key_vol_dir_blk_tmpl, $buf;
 
   my $storage_type = $storage_type_name_length & 0xf0;
-  print sprintf("storage_type=%02x\n", $storage_type) if $debug;
   my $name_length = $storage_type_name_length & 0x0f;
-  print sprintf("name_length=%02x\n", $name_length) if $debug;
 
   my $volname = substr($volume_name, 0, $name_length);
-
-  if ($debug) {
-    print sprintf("prv_vol_dir_blk=%04x\n", $prv_vol_dir_blk);
-    print sprintf("nxt_vol_dir_blk=%04x\n", $nxt_vol_dir_blk);
-    print sprintf("storage_type_name_length=%02x\n", $storage_type_name_length);
-    print sprintf("name_length=%02x\n", $name_length);
-    print sprintf("volume_name=%s\n", $volume_name);
-    print sprintf("volume_name=%s\n", substr($volume_name, 0, $name_length));
-    print sprintf("creation=%04x %04x\n", $creation_ymd, $creation_hm);
-print"\n";
-    print sprintf("create_date=%s\n", date_convert($creation_ymd, $creation_hm));
-print"\n";
-    print sprintf("version=%02x\n", $version);
-    print sprintf("min_version=%02x\n", $min_version);
-    print sprintf("access=%02x\n", $access);
-    print sprintf("entry_length=%02x\n", $entry_length);
-    print sprintf("entries_per_block=%02x\n", $entries_per_block);
-    print sprintf("file_count=%04x\n", $file_count);
-    print sprintf("bit_map_pointer=%04x\n", $bit_map_pointer);
-    print sprintf("total_blocks=%02x\n", $total_blocks);
-  }
 
   my @flds = unpack $key_dir_file_desc_ent_tmpl, $dir_ents;
 
   my @files = ();
   for (my $i = 0; $i < 12; $i++) {
     my $storage_type_name_length = shift @flds;
-    print sprintf("storage_type_name_length=%02x\n", $storage_type_name_length) if $debug;
     my $storage_type = $storage_type_name_length & 0xf0;
-    print sprintf("storage_type=%02x\n", $storage_type) if $debug;
     my $name_length = $storage_type_name_length & 0x0f;
-    print sprintf("name_length=%02x\n", $name_length) if $debug;
     my $file_name = shift @flds;
-    print sprintf("file_name=%s\n", $file_name) if $debug;
     my $fname = substr($file_name, 0, $name_length);
-    print sprintf("fname=%s\n", $fname) if $debug;
     my $file_type = shift @flds;
-    print sprintf("file_type=%02x\n", $file_type) if $debug;
     my $key_pointer = shift @flds;
-    print sprintf("key_pointer=%04x\n", $key_pointer) if $debug;
     my $blocks_used = shift @flds;
-    print sprintf("blocks_used=%04x\n", $blocks_used) if $debug;
     my $eof = shift @flds;
-    #print sprintf("eof=%04x\n", $eof);
     my ($e1, $e2, $e3)  = unpack "C*", $eof;
     my $endfile = (($e3 << 16) + ($e2 << 8) + $e1);
-    print sprintf("eof=%06x\n", $endfile) if $debug;
     my $creation_ymd = shift @flds;
-    print sprintf("creation_ymd=%04x\n", $creation_ymd) if $debug;
     my $creation_hm = shift @flds;
-    print sprintf("creation_hm=%04x\n", $creation_hm) if $debug;
     my $cdate = date_convert($creation_ymd, $creation_hm);
-    print sprintf("create_date=%s\n", $cdate) if $debug;
     my $version = shift @flds;
-    print sprintf("version=%02x\n", $version) if $debug;
     my $min_version = shift @flds;
-    print sprintf("min_version=%02x\n", $min_version) if $debug;
     my $access = shift @flds;
-    print sprintf("access=%02x\n", $access) if $debug;
     my $aux_type = shift @flds;
-    print sprintf("aux_type=%02x\n", $aux_type) if $debug;
     my $atype = '';
     if ($file_type == 0x06) {
       $atype = sprintf("A=\$%04X", $aux_type);
     }
     my $last_mod_ymd = shift @flds;
-    print sprintf("last_mod_ymd=%04x\n", $last_mod_ymd) if $debug;
     my $last_mod_hm = shift @flds;
     my $mdate = date_convert($last_mod_ymd, $last_mod_hm);
-    print sprintf("last_mod_hm=%04x\n", $last_mod_hm) if $debug;
     my $header_pointer = shift @flds;
-    print sprintf("header_pointer=%04x\n", $header_pointer) if $debug;
     if ($storage_type != 0) {
-      #print "pushing $file_name\n";
       my $f_type = $ftype{$file_type};
       $f_type = sprintf("\$%02x", $file_type) unless defined $f_type;
       push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile };
-    }
-  }
-
-  if ($debug) {
-    foreach my $file (@files) {
-      print "file=$file->{'filename'}\n";
     }
   }
 
@@ -324,70 +298,40 @@ sub parse_vol_dir_blk {
 
   my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $dir_ents) = unpack $vol_dir_blk_tmpl, $buf;
 
-  if ($debug) {
-    print sprintf("prv_vol_dir_blk=%04x\n", $prv_vol_dir_blk);
-    print sprintf("nxt_vol_dir_blk=%04x\n", $nxt_vol_dir_blk);
-  }
-
   my @flds = unpack $dir_file_desc_ent_tmpl, $dir_ents;
 
   my @files = ();
   for (my $i = 0; $i < 12; $i++) {
     my $storage_type_name_length = shift @flds;
-    print sprintf("storage_type_name_length=%02x\n", $storage_type_name_length) if $debug;
     my $file_name = shift @flds;
-    print sprintf("file_name=%s\n", $file_name) if $debug;
     my $storage_type = $storage_type_name_length & 0xf0;
     my $name_length = $storage_type_name_length & 0x0f;
     my $fname = substr($file_name, 0, $name_length);
-    print sprintf("fname=%s\n", $fname) if $debug;
     my $file_type = shift @flds;
-    print sprintf("file_type=%02x\n", $file_type) if $debug;
     my $key_pointer = shift @flds;
-    print sprintf("key_pointer=%04x\n", $key_pointer) if $debug;
     my $blocks_used = shift @flds;
-    print sprintf("blocks_used=%04x\n", $blocks_used) if $debug;
     my $eof = shift @flds;
-    #print sprintf("eof=%04x\n", $eof);
     my ($e1, $e2, $e3)  = unpack "C*", $eof;
     my $endfile = (($e3 << 16) + ($e2 << 8) + $e1);
-    print sprintf("eof=%06x\n", $endfile) if $debug;
     my $creation_ymd = shift @flds;
-    print sprintf("creation_ymd=%04x\n", $creation_ymd) if $debug;
     my $creation_hm = shift @flds;
-    print sprintf("creation_hm=%04x\n", $creation_hm) if $debug;
     my $cdate = date_convert($creation_ymd, $creation_hm);
-    print sprintf("create_date=%s\n", $cdate) if $debug;
     my $version = shift @flds;
-    print sprintf("version=%02x\n", $version) if $debug;
     my $min_version = shift @flds;
-    print sprintf("min_version=%02x\n", $min_version) if $debug;
     my $access = shift @flds;
-    print sprintf("access=%02x\n", $access) if $debug;
     my $aux_type = shift @flds;
-    print sprintf("aux_type=%02x\n", $aux_type) if $debug;
     my $atype = '';
     if ($file_type == 0x06) {
       $atype = sprintf("A=\$%04X", $aux_type);
     }
     my $last_mod_ymd = shift @flds;
-    print sprintf("last_mod_ymd=%04x\n", $last_mod_ymd) if $debug;
     my $last_mod_hm = shift @flds;
-    print sprintf("last_mod_hm=%04x\n", $last_mod_hm) if $debug;
     my $mdate = date_convert($last_mod_ymd, $last_mod_hm);
     my $header_pointer = shift @flds;
-    print sprintf("header_pointer=%04x\n", $header_pointer) if $debug;
     if ($storage_type != 0) {
-      #print "pushing $file_name\n";
       my $f_type = $ftype{$file_type};
       $f_type = sprintf("\$%02x", $file_type) unless defined $f_type;
       push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile };
-    }
-  }
-
-  if ($debug) {
-    foreach my $file (@files) {
-      print "file=$file->{'filename'}\n";
     }
   }
 
@@ -412,6 +356,75 @@ sub get_vol_dir_blk {
   return 0;
 }
 
+# Parse Key Volume Directory Block
+sub parse_subdir_hdr_blk {
+  my ($buf, $dbg) = @_;
+
+  $debug = 1 if defined $dbg && $dbg;
+
+  my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $subdir_name, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $parent_pointer, $parent_entry, $parent_entry_length, $dir_ents) = unpack $subdir_hdr_blk_tmpl, $buf;
+
+  my $storage_type = $storage_type_name_length & 0xf0;
+  my $name_length = $storage_type_name_length & 0x0f;
+
+  my $subdir_nm = substr($subdir_name, 0, $name_length);
+
+  my @flds = unpack $subdir_hdr_file_desc_ent_tmpl, $dir_ents;
+
+  my @files = ();
+  for (my $i = 0; $i < 12; $i++) {
+    my $storage_type_name_length = shift @flds;
+    my $storage_type = $storage_type_name_length & 0xf0;
+    my $name_length = $storage_type_name_length & 0x0f;
+    my $file_name = shift @flds;
+    my $fname = substr($file_name, 0, $name_length);
+    my $file_type = shift @flds;
+    my $key_pointer = shift @flds;
+    my $blocks_used = shift @flds;
+    my $eof = shift @flds;
+    my ($e1, $e2, $e3)  = unpack "C*", $eof;
+    my $endfile = (($e3 << 16) + ($e2 << 8) + $e1);
+    my $creation_ymd = shift @flds;
+    my $creation_hm = shift @flds;
+    my $cdate = date_convert($creation_ymd, $creation_hm);
+    my $version = shift @flds;
+    my $min_version = shift @flds;
+    my $access = shift @flds;
+    my $aux_type = shift @flds;
+    my $atype = '';
+    if ($file_type == 0x06) {
+      $atype = sprintf("A=\$%04X", $aux_type);
+    }
+    my $last_mod_ymd = shift @flds;
+    my $last_mod_hm = shift @flds;
+    my $mdate = date_convert($last_mod_ymd, $last_mod_hm);
+    my $header_pointer = shift @flds;
+    if ($storage_type != 0) {
+      my $f_type = $ftype{$file_type};
+      $f_type = sprintf("\$%02x", $file_type) unless defined $f_type;
+      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile };
+    }
+  }
+
+  return $prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $subdir_name, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $parent_pointer, $parent_entry, $parent_entry_length, @files;
+}
+
+sub get_subdir_hdr {
+  my ($pofile, $subdir_blk, $dbg) = @_;
+
+  $debug = 1 if defined $dbg && $dbg;
+
+  my $buf;
+
+  if (read_blk($pofile, $subdir_blk, \$buf)) {
+    dump_blk($buf) if $debug;
+    dump_blk($buf);
+    return parse_subdir_hdr_blk($buf, $debug);
+  }
+
+  return 0;
+}
+
 #
 # Get disk catalog.
 #
@@ -428,7 +441,6 @@ sub cat {
 
   foreach my $file (@files) {
     my $lck = ' ';
-    #print printf("access=%02x\n", $file->{'access'});
     if ($file->{'access'} == 0x01) {
       $lck = '*';
     }
@@ -441,7 +453,6 @@ sub cat {
     my ($prv_vol_dir_blk, $nxt_vol_dir_blk, @files) = get_vol_dir_blk($pofile, $vol_dir_blk, $debug);
     foreach my $file (@files) {
       my $lck = ' ';
-      #print printf("access=%02x\n", $file->{'access'});
       if ($file->{'access'} == 0x01) {
         $lck = '*';
       }
