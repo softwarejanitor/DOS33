@@ -41,6 +41,8 @@ my %ftype = (
   0xf6 => 'UD6',
   0xf7 => 'UD7',
   0xf8 => 'UD8',
+  0xfa => 'INT',
+  0xfb => 'IVR',
   #       fc    BAS Applesoft BASIC program file
   0xfc => 'BAS',
   #       fd    VAR Applesoft stored variables file
@@ -92,7 +94,7 @@ my $key_vol_dir_blk = 2;
 # 27-28 BIT_MAP_POINTER
 # 29-2a TOTAL_BLOCKS
 #
-my $key_vol_dir_blk_tmpl = 'vvCa15x8nnCCCCCvvva470';
+my $key_vol_dir_blk_tmpl = 'vvCa15x8vvCCCCCvvva470';
 
 my $vol_dir_blk_tmpl = 'vva504';
 
@@ -153,7 +155,7 @@ my $vol_bit_map_tmpl = 'C*';
 # 21-24 LAST_MOD
 # 25-26 HEADER_POINTER
 #
-my $file_desc_ent_tmpl = 'Ca15Cvva3nnCCCvnnv';
+my $file_desc_ent_tmpl = 'Ca15Cvva3vvCCCvvvv';
 
 my $key_dir_file_desc_ent_tmpl = '';
 for (my $i = 0; $i < 12; $i++) {
@@ -168,12 +170,17 @@ for (my $i = 0; $i < 12; $i++) {
 sub date_convert {
   my ($ymd, $hm) = @_;
 
+  #my ($ymd1, $ymd2) = unpack "CC", $ymd;
+  #my ($hm1, $hm2) = unpack "CC", $hm;
+
+  #print sprintf("ymd=%02x%02s\n", $ymd1, $ymd2);
+  #print sprintf("hm%02x%02s\n", $hm, $hm);
+
   return "<NO DATE>" unless (defined $ymd && defined $hm && $ymd != 0);
 
   my $year = ($ymd & 0xfe00) >> 9;  # bits 9-15
   #print "year=$year\n";
-  my $mon = (($ymd & 0x01e0) >> 5 - 1);  # bits 5-8
-  $mon++;
+  my $mon = ($ymd & 0x01e0) >> 5;  # bits 5-8
   #print "mon=$mon\n";
   my $day = $ymd & 0x001f;  # bits 0-4
   #print "day=$day\n";
@@ -276,7 +283,9 @@ print"\n";
     print sprintf("header_pointer=%04x\n", $header_pointer) if $debug;
     if ($storage_type != 0) {
       #print "pushing $file_name\n";
-      push @files, { 'filename' => $fname, 'ftype' => $ftype{$file_type}, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile };
+      my $f_type = $ftype{$file_type};
+      $f_type = sprintf("\$%02x", $file_type) unless defined $f_type;
+      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile };
     }
   }
 
@@ -370,7 +379,9 @@ sub parse_vol_dir_blk {
     print sprintf("header_pointer=%04x\n", $header_pointer) if $debug;
     if ($storage_type != 0) {
       #print "pushing $file_name\n";
-      push @files, { 'filename' => $fname, 'ftype' => $ftype{$file_type}, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile };
+      my $f_type = $ftype{$file_type};
+      $f_type = sprintf("\$%02x", $file_type) unless defined $f_type;
+      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile };
     }
   }
 
