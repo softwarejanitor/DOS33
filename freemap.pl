@@ -1,5 +1,13 @@
 #!/usr/bin/perl -w
 
+#
+# freemap.pl:
+#
+# Utility to get a free sector map of an Apple II DOS 3.3 disk image.
+#
+# 20190115 LSH
+#
+
 use strict;
 
 use DOS33;

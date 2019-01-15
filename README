@@ -1,12 +1,15 @@
 TODO:
 
-catalog -- mostly working
-read -- mostly working for simple text files
-write
-umlock
-lock
-rename
-delete
-copy
-disk zap/sector editor -- partially working
+catalog.pl -- mostly working
+freemap.pl -- mostly working
+dos33read.pl -- mostly working for simple text files
+dos33write.pl
+dos33umlock.pl
+dos33lock.pl
+dos33rename.pl
+dos33delete.pl
+dos33copy.pl
+zap.pl -- partially working
+prozap.pl -- partially working
+procat.pl -- partially working
 

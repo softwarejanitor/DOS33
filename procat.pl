@@ -1,5 +1,13 @@
 #!/usr/bin/perl -w
 
+#
+# procat.pl:
+#
+# Utility to get a 'catalog' (directory listing) of an Apple II ProDOS volume.
+#
+# 20190115 LSH
+#
+
 use strict;
 
 use ProDOS;

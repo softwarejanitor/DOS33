@@ -1,5 +1,13 @@
 #!/usr/bin/perl -w
 
+#
+# zap.pl:
+#
+# Utility to edit a DOS 3.3 sector (.DSK or .DO disk image).
+#
+# 20190115 LSH
+#
+
 use strict;
 
 use DSK;
@@ -15,25 +23,31 @@ my $write = 0;
 my @mods = ();
 
 while (defined $ARGV[0] && $ARGV[0] =~ /^-/) {
+  # Debug
   if ($ARGV[0] eq '-d') {
     $debug = 1;
     shift;
+  # Track
   } elsif ($ARGV[0] eq '-t' && defined $ARGV[1] && $ARGV[1] =~ /^\d+$/) {
     $trk = $ARGV[1];
     shift;
     shift;
+  # Sector
   } elsif ($ARGV[0] eq '-s' && defined $ARGV[1] && $ARGV[1] =~ /^\d+$/) {
     $sec = $ARGV[1];
     shift;
     shift;
+  # Destination track
   } elsif ($ARGV[0] eq '-dt' && defined $ARGV[1] && $ARGV[1] =~ /^\d+$/) {
     $dst_trk = $ARGV[1];
     shift;
     shift;
+  # Destination sector
   } elsif ($ARGV[0] eq '-ds' && defined $ARGV[1] && $ARGV[1] =~ /^\d+$/) {
     $dst_sec = $ARGV[1];
     shift;
     shift;
+  # Allow modifying data.
   } elsif ($ARGV[0] =~ /^-m([ahA])/ && defined $ARGV[1] && $ARGV[1] ne '') {
     my $typ = $1;
     print "$ARGV[1] typ=$typ\n" if $debug;
@@ -59,10 +73,13 @@ $dst_sec = $sec unless $dst_sec >= 0;
 my $buf;
 
 if (rts($dskfile, $trk, $sec, \$buf)) {
+  # Display the data in the sector.
   dump_sec($buf);
 
+  # Allow modifying data.
   if ($write) {
     print "WRITING $dst_trk $dst_sec\n" if $debug;
+    # Unpack the data in the sector.
     my @bytes = unpack "C256", $buf;
 
     foreach my $mod (@mods) {
@@ -88,10 +105,14 @@ if (rts($dskfile, $trk, $sec, \$buf)) {
       }
     }
 
-    my $buf = pack "C*", @bytes;
+    # Re-pack the data in the sector.
+    $buf = pack "C*", @bytes;
 
+    # Write the sector.
     if (wts($dskfile, $dst_trk, $dst_sec, $buf)) {
+      # Read the sector back in.
       if (rts($dskfile, $dst_trk, $dst_sec, \$buf)) {
+        # Display the data in the modified sector.
         dump_sec($buf);
       } else {
         print "Failed final read!\n";

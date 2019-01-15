@@ -2,6 +2,14 @@
 
 package DSK;
 
+#
+# DSK.pm:
+#
+# Module for low level access to Apple II .DSK and .DO disk image file (DOS Order).
+#
+# 20190115 LSH
+#
+
 use strict;
 
 use Exporter::Auto;

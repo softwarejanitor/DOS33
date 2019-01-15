@@ -1,5 +1,13 @@
 #!/usr/bin/perl -w
 
+#
+# prozap.pl:
+#
+# Utility to edit a ProDOS block (.PO image).
+#
+# 20190115 LSH
+#
+
 use strict;
 
 use PO;
@@ -13,17 +21,21 @@ my $write = 0;
 my @mods = ();
 
 while (defined $ARGV[0] && $ARGV[0] =~ /^-/) {
+  # Debug
   if ($ARGV[0] eq '-d') {
     $debug = 1;
     shift;
+  # Block to read
   } elsif ($ARGV[0] eq '-b' && defined $ARGV[1] && $ARGV[1] =~ /^\d+$/) {
     $blk = $ARGV[1];
     shift;
     shift;
+  # Destination block
   } elsif ($ARGV[0] eq '-db' && defined $ARGV[1] && $ARGV[1] =~ /^\d+$/) {
     $dst_blk = $ARGV[1];
     shift;
     shift;
+  # Allow modifying data.
   } elsif ($ARGV[0] =~ /^-m([ahA])/ && defined $ARGV[1] && $ARGV[1] ne '') {
     my $typ = $1;
     print "$ARGV[1] typ=$typ\n" if $debug;
@@ -46,13 +58,18 @@ $dst_blk = $blk unless $dst_blk >= 0;
 
 my $buf;
 
+# Read the block
 if (read_blk($pofile, $blk, \$buf)) {
+  # Display the data in the block.
   dump_blk($buf);
 
+  # Allow modifying the data.
   if ($write) {
     print "WRITING $dst_blk\n" if $debug;
+    # Unpack the data in the block
     my @bytes = unpack "C512", $buf;
 
+    # Process each modification.
     foreach my $mod (@mods) {
       my @mbytes = ();
       if ($mod->{'typ'} eq 'a') {
@@ -76,10 +93,14 @@ if (read_blk($pofile, $blk, \$buf)) {
       }
     }
 
-    my $buf = pack "C*", @bytes;
+    # Re-pack the data in the block
+    $buf = pack "C*", @bytes;
 
+    # Write the destination block (default to block read).
     if (write_blk($pofile, $dst_blk, $buf)) {
+      # Read the block back in.
       if (read_blk($pofile, $dst_blk, \$buf)) {
+        # Display the data in the modified block.
         dump_blk($buf);
       } else {
         print "Failed final read!\n";

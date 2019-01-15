@@ -2,6 +2,14 @@
 
 package ProDOS;
 
+#
+# ProDOS.pm:
+#
+# Module to access Apple II ProDOS volumes.
+#
+# 20190115 LSH
+#
+
 use strict;
 
 use PO;
@@ -12,6 +20,8 @@ my $debug = 0;
 
 # ProDOS file types
 my %ftype = (
+  # $0x Types: General
+
   # 00        Typeless file
   0x00 => '   ',
   # 01    BAD Bad block(s) file
@@ -35,12 +45,16 @@ my %ftype = (
   # f    DIR Directory file
   0x0f => 'DIR',
 
+  # $1x Types: Productivity
+
   # 19    ADB AppleWorks data base file
   0x19 => 'ADB',
   # 1a    AWP AppleWorks word processing file
   0x1a => 'AWP',
   # 1b    ASP AppleWorks spreadsheet file
   0x1b => 'ASP',
+
+  # $2x Types: Code
 
   # $20 TDM Desktop Manager File
   0x20 => 'TDM',
@@ -64,10 +78,14 @@ my %ftype = (
   # $2E P8C ProDOS 8 Code Module
   0x2e => 'P8C',
 
+  # $4x Types: Miscellaneous
+
   # $41 OCR Optical Character Recognition
   0x41 => 'OCR',
   # $42 FTD File Type Definitions
   0x42 => 'FTD',
+
+  # $5x Types: Apple IIgs General
 
   # $50 GWP Apple IIgs Word Processing
   0x50 => 'GWP',
@@ -123,6 +141,8 @@ my %ftype = (
   # $5E DVU Development Utility
   0x5e => 'DVU',
 
+  # $6x Types: PC Transporter
+
   # $60 PRE PC Pre-Boot
   0x60 => 'PRE',
   # $6B BIO PC BIOS
@@ -135,6 +155,8 @@ my %ftype = (
   0x6e => 'PRE',
   # $6F HDV PC Hard Disk Image
   0x6f => 'HDV',
+
+  # $7x Types: Kreative Software
 
   # $70 SN2 Sabine's Notebook 2.0
   0x70 => 'SN2',
@@ -174,6 +196,8 @@ my %ftype = (
   # $7F JCP
   0x7f => 'JCP',
 
+  # $8x Types: GEOS
+
   # $80 GES System File
   0x80 => 'GES',
   # $81 GEA Desk Accessory
@@ -199,6 +223,8 @@ my %ftype = (
   # $8D GEW Formatting Data
   0x8d => 'GEW',
 
+  # $Ax Types: Apple IIgs BASIC
+
   # $A0 WP  WordPerfect
   0xa0 => 'WP ',
   # $AB GSB Apple IIgs BASIC Program
@@ -207,6 +233,8 @@ my %ftype = (
   0xac => 'TDF',
   # $AD BDF Apple IIgs BASIC Data
   0xad => 'BDF',
+
+  # $Bx Types: Apple IIgs System
 
   # $B0 SRC Apple IIgs Source Code
   0xb0 => 'SRC',
@@ -245,6 +273,8 @@ my %ftype = (
   # $BF DOC Apple IIgs Document
   0xbf => 'DOC',
 
+  # $Cx Types: Graphics
+
   # $C0 PNT Apple IIgs Packed Super HiRes
   0xc0 => 'PNT',
   #    $0001 - Packed Super HiRes
@@ -277,6 +307,8 @@ my %ftype = (
   # $CA ICN Apple IIgs Icon File
   0xca => 'ICN',
 
+  # $Dx Types: Audio
+
   # $D5 MUS Music
   0xd5 => 'MUS',
   # $D6 INS Instrument
@@ -295,6 +327,9 @@ my %ftype = (
 
   # $DB DBM DB Master Document
   0xdb => 'DBM',
+
+  # $Ex Types: Miscellaneous
+
   # $E0 LBR Archive
   0xe0 => 'LBR',
   #    $0000 - ALU
@@ -314,6 +349,8 @@ my %ftype = (
   # ef    PAS ProDOS PASCAL file
   0xef => 'PAS',
 
+  # $Fx Types: System
+
   # f0    CMD ProDOS added command file
   0xf0 => 'CMD',
   # f1-f8     User defined file types 1 through 8
@@ -325,6 +362,10 @@ my %ftype = (
   0xf6 => 'UD6',
   0xf7 => 'UD7',
   0xf8 => 'PRG',
+
+  # $F9 P16 ProDOS-16 System File
+  0xf9 => 'P16',
+
   # fa    INT Integer BASIC Program
   0xfa => 'INT',
   # fb    IVR Integer BASIC Variables
@@ -339,6 +380,9 @@ my %ftype = (
   0xff => 'SYS',
 );
 
+#
+# Months for catalog date format.
+#
 my %months = (
    1, 'JAN',
    2, 'FEB',
@@ -354,6 +398,7 @@ my %months = (
   12, 'DEC',
 );
 
+# Default key volume directory block.
 my $key_vol_dir_blk = 2;
 
 #

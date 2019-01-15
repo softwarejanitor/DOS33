@@ -2,6 +2,14 @@
 
 package PO;
 
+#
+# PO.pm:
+#
+# Module for low level access to Apple II .PO disk images (ProDOS Order)
+#
+# 20190115 LSH
+#
+
 use strict;
 
 use Exporter::Auto;
@@ -10,7 +18,7 @@ my $debug = 0;
 
 my $min_blk = 0;  # Minimum block number
 my $max_blk = 280;  # Maximum block number
-my $blk_size = 512;
+my $blk_size = 512;  # Block size
 
 #
 # Read entire .po image.

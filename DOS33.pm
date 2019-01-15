@@ -2,6 +2,14 @@
 
 package DOS33;
 
+#
+# DOS33.pm:
+#
+# Module to access Apple II DOS 3.3 disk images.
+#
+# 20190115 LSH
+#
+
 use strict;
 
 use DSK;
