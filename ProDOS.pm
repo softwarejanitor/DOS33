@@ -12,6 +12,8 @@ package ProDOS;
 
 use strict;
 
+use POSIX;
+
 use PO;
 
 use Exporter::Auto;
@@ -834,6 +836,98 @@ sub cat {
     }
     $vol_dir_blk = $nxt_vol_dir_blk;
   }
+}
+
+sub get_master_ind_blk {
+  my ($pofile, $blk, $dbg) = @_;
+}
+
+sub get_ind_blk {
+  my ($pofile, $blk, $dbg) = @_;
+}
+
+sub find_file {
+  my ($pofile, $filename, $dbg) = @_;
+}
+
+sub read_file {
+  my ($pofile, $filename, $dbg) = @_;
+}
+
+sub parse_vol_bit_map {
+  my ($buf, $dbg) = @_;
+
+  my @blocks = ();
+
+  my (@bytes) = unpack $vol_bit_map_tmpl, $buf;
+
+  foreach my $byte (@bytes) {
+    #print sprintf("%02x ", $byte);
+    #print sprintf("%08b ", $byte);
+    push @blocks, $byte;
+  }
+  print "\n";
+
+  return @blocks;
+}
+
+sub get_vol_bit_map {
+  my ($pofile, $dbg) = @_;
+
+  $debug = 1 if defined $dbg && $dbg;
+
+  my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $volname, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $bit_map_pointer, $total_blocks, @files) = get_key_vol_dir_blk($pofile, $debug);
+
+  my $buf;
+
+  #print sprintf("bit_map_pointer=%04x\n", $bit_map_pointer) if $debug;
+
+  # Need to use total_blocks to calculate the number of volume bit map blocks.
+  #print sprintf("total_blocks=%04x\n", $total_blocks);
+  my $num_tracks = $total_blocks / 8;
+  #print sprintf("num_tracks=%d\n", $num_tracks);
+  my $num_vol_bit_map_blks = ceil($num_tracks / 512.0);
+  #print sprintf("num_vol_bit_map_blks=%d\n", $num_vol_bit_map_blks);
+  $num_vol_bit_map_blks = 1 if $num_vol_bit_map_blks < 1;
+  #print sprintf("num_vol_bit_map_blks=%d\n", $num_vol_bit_map_blks);
+
+  my @blocks = ();
+
+  my $trk = 0;
+  for (my $blk = $bit_map_pointer; $blk < $bit_map_pointer + $num_vol_bit_map_blks; $blk++) {
+    if (read_blk($pofile, $bit_map_pointer, \$buf)) {
+      dump_blk($buf) if $debug;
+      my (@blks) = parse_vol_bit_map($buf, $debug);
+      foreach my $blk (@blks) {
+        #print sprintf("%02x ", $blk);
+        push @blocks, $blk;
+        last if $trk++ > $num_tracks;
+      }
+      print "\n";
+    }
+  }
+
+  return @blocks;
+}
+
+sub freemap {
+  my ($pofile, $dbg) = @_;
+
+  $debug = 1 if defined $dbg && $dbg;
+
+  my (@blocks) = get_vol_bit_map($pofile, $debug);
+
+  print "    12345678\n";
+  print "   +--------\n";
+
+  my $trk = 0;
+  foreach my $byte (@blocks) {
+    my $bits = sprintf("%08b", $byte);
+    $bits =~ s/[0]/ /g;
+    $bits =~ s/[1]/\*/g;
+    print sprintf("%2d |%s\n", $trk++, $bits);
+  }
+  print "\n";
 }
 
 1;
