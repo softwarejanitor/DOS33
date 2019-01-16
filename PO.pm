@@ -130,6 +130,12 @@ sub read_blk {
   return 0;
 }
 
+sub clear_buf {
+  my ($buf) = @_;
+
+  $$buf = pack "C*", 0x00 x 512;
+}
+
 #
 # Write Track/Sector
 #

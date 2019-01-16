@@ -1011,6 +1011,7 @@ sub read_file {
     my $blkno = 1;
     foreach my $blk (@blks) {
       #print "blkno=$blkno blk=$blk\n";
+      clear_buf(\$buf2);
       if (read_blk($pofile, $blk, \$buf2)) {
         dump_blk($buf2) if $debug;
         my @bytes = unpack "C*", $buf2;
@@ -1083,6 +1084,7 @@ sub get_vol_bit_map {
 
   my $trk = 0;
   for (my $blk = $bit_map_pointer; $blk < $bit_map_pointer + $num_vol_bit_map_blks; $blk++) {
+    clear_buf(\$buf);
     if (read_blk($pofile, $bit_map_pointer, \$buf)) {
       dump_blk($buf) if $debug;
       my (@blks) = parse_vol_bit_map($buf, $debug);
