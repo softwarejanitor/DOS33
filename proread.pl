@@ -12,8 +12,8 @@ use strict;
 
 use ProDOS;
 
-my $mode = 'T';
-my $conv = 1;
+my $mode = 'T';  # T=Text
+my $conv = 1;  # Convert \r to \n
 my $debug = 0;
 
 while (defined $ARGV[0] && $ARGV[0] =~ /^-/) {

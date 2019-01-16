@@ -851,7 +851,7 @@ sub get_master_ind_blk {
 
   $debug = 1 if defined $dbg && $dbg;
 
-  print "pofile=$pofile master_ind_blk=$master_ind_blk\n";
+  #print "pofile=$pofile master_ind_blk=$master_ind_blk\n";
 
   my $buf;
 
@@ -877,7 +877,7 @@ sub get_ind_blk {
 
   $debug = 1 if defined $dbg && $dbg;
 
-  print "pofile=$pofile ind_blk=$ind_blk\n";
+  #print "pofile=$pofile ind_blk=$ind_blk\n";
 
   my $buf;
 
@@ -914,7 +914,7 @@ sub find_file {
 
   $debug = 1 if defined $dbg && $dbg;
 
-  print "pofile=$pofile filename=$filename\n";
+  #print "pofile=$pofile filename=$filename\n";
 
   my $storage_type = 0;
   my $file_type = 0x00;
@@ -960,6 +960,8 @@ sub find_file {
     }
   }
 
+  print "File not found\n" unless $found_it;
+
   return $storage_type, $file_type, $key_pointer, $blocks_used;
 }
 
@@ -971,18 +973,34 @@ sub read_file {
 
   $debug = 1 if defined $dbg && $dbg;
 
-  print "pofile=$pofile filename=$filename mode=$mode conv=$conv\n";
+  print "pofile=$pofile filename=$filename mode=$mode conv=$conv\n" if $debug;
 
   my ($storage_type, $file_type, $key_pointer, $blocks_used) = find_file($pofile, $filename, $debug);
 
+  return if $storage_type == 0;
+
   my $buf;
 
-  print "storage_type=$storage_type file_type=$file_type key_pointer=$key_pointer blocks_used=$blocks_used\n";
+  print "storage_type=$storage_type file_type=$file_type key_pointer=$key_pointer blocks_used=$blocks_used\n" if $debug;
+
   # Seedling file, only 1 block
   if ($storage_type == 1) {
-    if (read_blk($pofile, $key_pointer, \$buf)) {
+    my $buf2;
+
+    if (read_blk($pofile, $key_pointer, \$buf2)) {
       #dump_blk($buf) if $debug;
       dump_blk($buf);
+      my @bytes = unpack "C*", $buf2;
+      foreach my $byte (@bytes) {
+        # For text file translation.
+        last if $byte == 0x00 && $mode eq 'T';
+        # Translate \r to \n
+        $byte = 0x0a if $byte == 0x8d && $conv;
+        # Convert Apple II ASCII to standard ASCII (clear high bit)
+        $byte &= 0x7f if $mode eq 'T';
+        #print sprintf("%c", $byte & 0x7f);
+        print sprintf("%c", $byte);
+      }
     }
   # Sapling file, 2-256 blocks
   } elsif ($storage_type == 2) {
@@ -994,8 +1012,18 @@ sub read_file {
     foreach my $blk (@blks) {
       #print "blkno=$blkno blk=$blk\n";
       if (read_blk($pofile, $blk, \$buf2)) {
-        #dump_blk($buf2) if $debug;
-        dump_blk($buf2);
+        dump_blk($buf2) if $debug;
+        my @bytes = unpack "C*", $buf2;
+        foreach my $byte (@bytes) {
+          # For text file translation.
+          last if $byte == 0x00 && $mode eq 'T';
+          # Translate \r to \n
+          $byte = 0x0a if $byte == 0x8d && $conv;
+          # Convert Apple II ASCII to standard ASCII (clear high bit)
+          $byte &= 0x7f if $mode eq 'T';
+          #print sprintf("%c", $byte & 0x7f);
+          print sprintf("%c", $byte);
+        }
       }
       last if $blkno++ == $blocks_used - 1;
     }
