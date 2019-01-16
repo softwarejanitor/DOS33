@@ -1091,9 +1091,9 @@ sub get_vol_bit_map {
       foreach my $blk (@blks) {
         #print sprintf("%02x ", $blk);
         push @blocks, $blk;
-        last if $trk++ > $num_tracks;
+        last if $trk++ >= $num_tracks;
       }
-      print "\n";
+      #print "\n";
     }
   }
 
