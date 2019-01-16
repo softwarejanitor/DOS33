@@ -560,7 +560,7 @@ sub parse_key_vol_dir_blk {
 
   my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $volume_name, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $bit_map_pointer, $total_blocks, $dir_ents) = unpack $key_vol_dir_blk_tmpl, $buf;
 
-  my $storage_type = $storage_type_name_length & 0xf0;
+  my $storage_type = ($storage_type_name_length & 0xf0) >> 4;
   my $name_length = $storage_type_name_length & 0x0f;
 
   my $volname = substr($volume_name, 0, $name_length);
@@ -570,7 +570,7 @@ sub parse_key_vol_dir_blk {
   my @files = ();
   for (my $i = 0; $i < 12; $i++) {
     my $storage_type_name_length = shift @flds;
-    my $storage_type = $storage_type_name_length & 0xf0;
+    my $storage_type = ($storage_type_name_length & 0xf0) >> 4;
     my $name_length = $storage_type_name_length & 0x0f;
     my $file_name = shift @flds;
     my $fname = substr($file_name, 0, $name_length);
@@ -598,7 +598,7 @@ sub parse_key_vol_dir_blk {
     if ($storage_type != 0) {
       my $f_type = $ftype{$file_type};
       $f_type = sprintf("\$%02x", $file_type) unless defined $f_type;
-      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile, 'keyptr' => $key_pointer };
+      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile, 'keyptr' => $key_pointer, 'storage_type' => $storage_type };
     }
   }
 
@@ -636,9 +636,9 @@ sub parse_vol_dir_blk {
   my @files = ();
   for (my $i = 0; $i < 12; $i++) {
     my $storage_type_name_length = shift @flds;
-    my $file_name = shift @flds;
-    my $storage_type = $storage_type_name_length & 0xf0;
+    my $storage_type = ($storage_type_name_length & 0xf0) >> 4;
     my $name_length = $storage_type_name_length & 0x0f;
+    my $file_name = shift @flds;
     my $fname = substr($file_name, 0, $name_length);
     my $file_type = shift @flds;
     my $key_pointer = shift @flds;
@@ -664,7 +664,7 @@ sub parse_vol_dir_blk {
     if ($storage_type != 0) {
       my $f_type = $ftype{$file_type};
       $f_type = sprintf("\$%02x", $file_type) unless defined $f_type;
-      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile, 'keyptr' => $key_pointer };
+      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile, 'keyptr' => $key_pointer, 'storage_type' => $storage_type };
     }
   }
 
@@ -697,7 +697,7 @@ sub parse_subdir_hdr_blk {
 
   my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $subdir_name, $foo, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $parent_pointer, $parent_entry, $parent_entry_length, $dir_ents) = unpack $subdir_hdr_blk_tmpl, $buf;
 
-  my $storage_type = $storage_type_name_length & 0xf0;
+  my $storage_type = ($storage_type_name_length & 0xf0) >> 4;
   my $name_length = $storage_type_name_length & 0x0f;
 
   my $subdir_nm = substr($subdir_name, 0, $name_length);
@@ -707,9 +707,9 @@ sub parse_subdir_hdr_blk {
   my @files = ();
   for (my $i = 0; $i < 12; $i++) {
     my $storage_type_name_length = shift @flds;
-    print sprintf("storage_type_name_length=%02x\n", $storage_type_name_length) if $debug;
-    my $storage_type = $storage_type_name_length & 0xf0;
-    print sprintf("storage_type=%02x\n", $storage_type) if $debug;
+    my $storage_type = ($storage_type_name_length & 0xf0) >> 4;
+    print sprintf("storage_type_name_length=%02x\n", $storage_type_name_length);
+    print sprintf("storage_type=%02x\n", $storage_type);
     my $name_length = $storage_type_name_length & 0x0f;
     print sprintf("name_length=%02x\n", $name_length) if $debug;
     my $file_name = shift @flds;
@@ -740,7 +740,7 @@ sub parse_subdir_hdr_blk {
     if ($storage_type != 0) {
       my $f_type = $ftype{$file_type};
       $f_type = sprintf("\$%02x", $file_type) unless defined $f_type;
-      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile, 'keyptr' => $key_pointer };
+      push @files, { 'filename' => $fname, 'ftype' => $f_type, 'used' => $blocks_used, 'mdate' => $mdate, 'cdate' => $cdate, 'atype' => $aux_type, 'atype' => $atype, 'access' => $access, 'eof' => $endfile, 'keyptr' => $key_pointer, 'storage_type' => $storage_type };
     }
   }
 
@@ -838,22 +838,179 @@ sub cat {
   }
 }
 
+# Parse master index block (tree file)
+sub parse_master_ind_blk {
+  my ($buf, $dbg) = @_;
+
+  $debug = 1 if defined $dbg && $dbg;
+}
+
+# Get master index block (tree file)
 sub get_master_ind_blk {
-  my ($pofile, $blk, $dbg) = @_;
+  my ($pofile, $master_ind_blk, $dbg) = @_;
+
+  $debug = 1 if defined $dbg && $dbg;
+
+  print "pofile=$pofile master_ind_blk=$master_ind_blk\n";
+
+  my $buf;
+
+  my @blocks = ();
+
+  if (read_blk($pofile, $master_ind_blk, \$buf)) {
+    dump_blk($buf) if $debug;
+  }
+
+  return @blocks;
 }
 
+# Parse index block (sapling file)
+sub parse_ind_blk {
+  my ($buf, $dbg) = @_;
+
+  $debug = 1 if defined $dbg && $dbg;
+}
+
+# Get index block (sapling file)
 sub get_ind_blk {
-  my ($pofile, $blk, $dbg) = @_;
+  my ($pofile, $ind_blk, $dbg) = @_;
+
+  $debug = 1 if defined $dbg && $dbg;
+
+  print "pofile=$pofile ind_blk=$ind_blk\n";
+
+  my $buf;
+
+  my @blocks = ();
+
+  if (read_blk($pofile, $ind_blk, \$buf)) {
+    dump_blk($buf) if $debug;
+    my (@lo) = unpack "C256", $buf;
+    #foreach my $byte (@lo) {
+    #  print sprintf("%02x ", $byte);
+    #}
+    #print "\n";
+    my (@hi) = unpack "x256C256", $buf;
+    #foreach my $byte (@hi) {
+    #  print sprintf("%02x ", $byte);
+    #}
+    #print "\n";
+    for (my $b = 0; $b < 256; $b++) {
+      #print sprintf("lo=%02x hi=%02x\n", $lo[$b], $hi[$b]);
+      my $blk = ($hi[$b] << 8) | $lo[$b];
+      #print sprintf("blk=%04x\n", $blk);
+      push @blocks, $blk;
+    }
+  }
+
+  return @blocks;
 }
 
+#
+# Find a file
+#
 sub find_file {
   my ($pofile, $filename, $dbg) = @_;
+
+  $debug = 1 if defined $dbg && $dbg;
+
+  print "pofile=$pofile filename=$filename\n";
+
+  my $storage_type = 0;
+  my $file_type = 0x00;
+  my $key_pointer = 0x00;
+  my $blocks_used = 0x00;
+
+  my ($prv_vol_dir_blk, $nxt_vol_dir_blk, $storage_type_name_length, $volume_name, $creation_ymd, $creation_hm, $version, $min_version, $access, $entry_length, $entries_per_block, $file_count, $bit_map_pointer, $total_blocks, @files) = get_key_vol_dir_blk($pofile, $debug);
+
+  my $found_it = 0;
+  foreach my $file (@files) {
+    #print "file=$file->{'filename'}\n";
+    if ($file->{'filename'} eq $filename) {
+      #print "FOUND IT!\n";
+      $found_it = 1;
+      $storage_type = $file->{'storage_type'};
+      $file_type = $file->{'ftype'};
+      $key_pointer = $file->{'keyptr'};
+      $blocks_used = $file->{'used'};
+      last;
+    }
+  }
+
+  if (! $found_it) {
+    my $vol_dir_blk = $nxt_vol_dir_blk;
+
+    while ($vol_dir_blk) {
+      my ($prv_vol_dir_blk, $nxt_vol_dir_blk, @files) = get_vol_dir_blk($pofile, $vol_dir_blk, $debug);
+
+      foreach my $file (@files) {
+        #print "file=$file->{'filename'}\n";
+        if ($file->{'filename'} eq $filename) {
+          #print "FOUND IT!\n";
+          $found_it = 1;
+          $storage_type = $file->{'storage_type'};
+          $file_type = $file->{'ftype'};
+          $key_pointer = $file->{'keyptr'};
+          $blocks_used = $file->{'used'};
+          last;
+        }
+      }
+      $vol_dir_blk = $nxt_vol_dir_blk;
+      last if $found_it;
+    }
+  }
+
+  return $storage_type, $file_type, $key_pointer, $blocks_used;
 }
 
+#
+# Read a file
+#
 sub read_file {
-  my ($pofile, $filename, $dbg) = @_;
+  my ($pofile, $filename, $mode, $conv, $dbg) = @_;
+
+  $debug = 1 if defined $dbg && $dbg;
+
+  print "pofile=$pofile filename=$filename mode=$mode conv=$conv\n";
+
+  my ($storage_type, $file_type, $key_pointer, $blocks_used) = find_file($pofile, $filename, $debug);
+
+  my $buf;
+
+  print "storage_type=$storage_type file_type=$file_type key_pointer=$key_pointer blocks_used=$blocks_used\n";
+  # Seedling file, only 1 block
+  if ($storage_type == 1) {
+    if (read_blk($pofile, $key_pointer, \$buf)) {
+      #dump_blk($buf) if $debug;
+      dump_blk($buf);
+    }
+  # Sapling file, 2-256 blocks
+  } elsif ($storage_type == 2) {
+    my @blks = get_ind_blk($pofile, $key_pointer, $debug);
+
+    my $buf2;
+
+    my $blkno = 1;
+    foreach my $blk (@blks) {
+      #print "blkno=$blkno blk=$blk\n";
+      if (read_blk($pofile, $blk, \$buf2)) {
+        #dump_blk($buf2) if $debug;
+        dump_blk($buf2);
+      }
+      last if $blkno++ == $blocks_used - 1;
+    }
+  # Tree file, 257+ blocks
+  } elsif ($storage_type == 3) {
+    my @blks = get_master_ind_blk($pofile, $key_pointer, $debug);
+    ##FIXME -- need to handle Tree files here.
+  } else {
+    print "Not a regular file!\n";
+  }
 }
 
+#
+# Parse volume bit map
+#
 sub parse_vol_bit_map {
   my ($buf, $dbg) = @_;
 
@@ -871,6 +1028,9 @@ sub parse_vol_bit_map {
   return @blocks;
 }
 
+#
+# Get volume bit map
+#
 sub get_vol_bit_map {
   my ($pofile, $dbg) = @_;
 
@@ -910,6 +1070,9 @@ sub get_vol_bit_map {
   return @blocks;
 }
 
+#
+# Display blocks free map
+#
 sub freemap {
   my ($pofile, $dbg) = @_;
 
