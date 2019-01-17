@@ -24,6 +24,8 @@ while (defined $ARGV[0] && $ARGV[0] =~ /^-/) {
     $blk = $ARGV[1];
     shift;
     shift;
+  } else {
+    die "Unknown command line argument $ARGV[0]\n";
   }
 }
 

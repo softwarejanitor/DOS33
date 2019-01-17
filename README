@@ -7,7 +7,7 @@ dos33write.pl -- started
 dos33umlock.pl -- mostly working
 dos33lock.pl -- mostly working
 dos33rename.pl -- mostly working
-dos33delete.pl -- started
+dos33delete.pl -- in progress
 dos33copy.pl -- started
 zap.pl -- partially working
 prozap.pl -- partially working

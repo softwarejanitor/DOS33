@@ -60,6 +60,8 @@ while (defined $ARGV[0] && $ARGV[0] =~ /^-/) {
   } elsif ($ARGV[0] eq "-w") {
     $write = 1;
     shift;
+  } else {
+    die "Unknown command line argument $ARGV[0]\n";
   }
 }
 

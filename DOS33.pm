@@ -495,6 +495,7 @@ sub read_file {
           #print sprintf("%c", $byte & 0x7f);
           print sprintf("%c", $byte);
         }
+##FIXME -- need to handle additional file types + handle incomplete last sectors properly here.
       }
     }
   }
@@ -582,13 +583,85 @@ sub delete_file {
 
   my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
   if (defined $file && $file && $file->{'trk'}) {
-    ##FIXME
+    print "cat_trk=$cat_trk cat_sec=$cat_sec\n";
+    dump_sec($cat_buf) if $debug;
+    my @bytes = unpack "C*", $cat_buf;
 
     # Mark file as deleted.
+    # 11 is first tslist sector track
+    my $first_tslist_sec_trk = $bytes[11 + (($file->{'cat_offset'} - 1) * 35)];
+    print sprintf("first_tslist_sec_trk=%02x\n", $first_tslist_sec_trk);
+    $bytes[11 + (($file->{'cat_offset'} - 1) * 35)] = 0x00;
+    # Set last byte of filename to first tslist sector track
+    $bytes[43 + (($file->{'cat_offset'} - 1) * 35)] = $first_tslist_sec_trk;
 
+    # Re-pack the data in the sector.
+    $cat_buf = pack "C*", @bytes;
+
+    dump_sec($cat_buf) if $debug;
     # Write back catalog sector.
+    #if (!wts($dskfile, $cat_trk, $cat_sec, $cat_buf)) {
+    #  print "Failed to write catalog sector $cat_trk $cat_sec!\n";
+    #}
+
+    my ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs) = get_vtoc_sec($dskfile);
+
+    my $tmpl = '';
+    for (my $t = $min_trk; $t <= $max_trk; $t++) {
+      $tmpl .= $bit_map_free_sec_tmpl;
+    }
+
+    print "tmpl=$tmpl\n" if $debug;
+    my @flds = unpack $tmpl, $bit_map_free_secs;
+
+    if ($debug) {
+      for (my $t = $min_trk; $t <= $max_trk; $t++) {
+        print sprintf("%2d %04x\n", $t, $flds[$t]) if $debug;
+        print sprintf("%2d %016b\n", $t, $flds[$t]) if $debug;
+        my $fr = sprintf("%016b", $flds[$t]);
+        print "fr=$fr\n" if $debug;
+        my $fm = reverse $fr;
+        print "fm=$fm\n" if $debug;
+        $fm =~ s/0/ /g;
+        $fm =~ s/1/*/g;
+        print "fm=$fm\n" if $debug;
+        print sprintf("%2d|%s\n", $t, $fm);
+      }
+    }
 
     # get the files t/s list and free those sectors
+    my @secs = get_tslist($dskfile, $file->{'trk'}, $file->{'sec'});
+    foreach my $sec (@secs) {
+      next if $sec->{'trk'} == 0 && $sec->{'sec'} == 0;
+      #print "trl=$sec->{'trk'} sec=$sec->{'sec'}\n";
+      my $fr = sprintf("%016b", $flds[$sec->{'trk'}]);
+      #print "fr=$fr\n";
+      $flds[$sec->{'trk'}] |= (1 << $sec->{'sec'});
+      my $fr2 = sprintf("%016b", $flds[$sec->{'trk'}]);
+      #print "fr=$fr2\n";
+    }
+    ##FIXME -- may need to free additional tslist sectors.
+    $flds[$file->{'trk'}] |= (1 << $file->{'sec'});
+
+    if ($debug) {
+      for (my $t = $min_trk; $t <= $max_trk; $t++) {
+        print sprintf("%2d %04x\n", $t, $flds[$t]) if $debug;
+        print sprintf("%2d %016b\n", $t, $flds[$t]) if $debug;
+        my $fr = sprintf("%016b", $flds[$t]);
+        print "fr=$fr\n" if $debug;
+        my $fm = reverse $fr;
+        print "fm=$fm\n" if $debug;
+        $fm =~ s/0/ /g;
+        $fm =~ s/1/*/g;
+        print "fm=$fm\n" if $debug;
+        print sprintf("%2d|%s\n", $t, $fm);
+      }
+    }
+
+    $bit_map_free_secs = pack $tmpl, @flds;
+
+    # Write vtoc back
+##FIXME
   }
 }
 
@@ -628,7 +701,6 @@ sub rename_file {
     # Re-pack the data in the sector.
     $cat_buf = pack "C*", @bytes;
 
-    # Write back catalog sector.
     dump_sec($cat_buf) if $debug;
     # Write back catalog sector.
     if (!wts($dskfile, $cat_trk, $cat_sec, $cat_buf)) {
@@ -662,7 +734,6 @@ sub write_file {
 
   ##FIXME
 }
-
 
 1;
 
