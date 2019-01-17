@@ -339,6 +339,21 @@ sub get_vtoc_sec {
   return 0;
 }
 
+sub write_vtoc {
+  my ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs) = @_;
+
+  # Re-pack vtoc sector
+  my $buf = pack $vtoc_fmt_tmpl, ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs);
+
+  # Write back vtoc sector.
+  #if (wts($dskfile, $vtoc_trk, $vtoc_sec, $buf)) {
+  #  return 1;
+  #} else {
+  #  print "Failed to write catalog sector $cat_trk $cat_sec!\n";
+  #  return 0;
+  #}
+}
+
 #
 # Parse a sector of a track/sector list
 #
@@ -663,8 +678,10 @@ sub delete_file {
 
     $bit_map_free_secs = pack $tmpl, @flds;
 
-    # Write vtoc back
-##FIXME
+    # Write back vtoc
+    if (!write_vtoc($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs)) {
+      print "I/O ERROR!\n";
+    }
   }
 }
 
