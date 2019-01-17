@@ -439,6 +439,8 @@ sub find_file {
     my $cat_buf;
     my @files = ();
     do {
+      my $cur_cat_trk = $next_cat_trk;
+      my $cur_cat_sec = $next_cat_sec;
       ($cat_buf, $next_cat_trk, $next_cat_sec, @files) = get_cat_sec($dskfile, $next_cat_trk, $next_cat_sec);
       if (defined $next_cat_trk && $next_cat_trk ne '') {
         foreach my $file (@files) {
@@ -446,7 +448,7 @@ sub find_file {
           $fn =~ s/\s+$//g;
           if ($fn eq $filename) {
             #print "trk=$file->{'trk'} sec=$file->{'sec'}\n";
-            return $file, $next_cat_trk, $next_cat_sec, $cat_buf;
+            return $file, $cur_cat_trk, $cur_cat_sec, $cat_buf;
           }
         }
       }
@@ -508,11 +510,29 @@ sub unlock_file {
 
   my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
   if ($file->{'trk'}) {
-    ##FIXME
+    print "cat_trk=$cat_trk cat_sec=$cat_sec\n" if $debug;
+    dump_sec($cat_buf) if $debug;
+    my @bytes = unpack "C*", $cat_buf;
+
+    # 12 is number of bytes before file descriptive entries, 35 is length of file descriptive entry.
+    my $file_type = $bytes[13 + (($file->{'cat_offset'} - 1) * 35)];
+
+    print sprintf("cat_offset=%d\n", $file->{'cat_offset'}) if $debug;
+    print sprintf("file_type=%02x\n", $file_type) if $debug;
 
     # Mark file as unlocked.
+    my $new_file_type = $bytes[13 + (($file->{'cat_offset'} - 1) * 35)] & 0x7f;
+    print sprintf("new_file_type=%02x\n", $new_file_type) if $debug;
+    $bytes[13 + (($file->{'cat_offset'} - 1) * 35)] = $new_file_type;
 
+    # Re-pack the data in the sector.
+    $cat_buf = pack "C*", @bytes;
+
+    dump_sec($cat_buf) if $debug;
     # Write back catalog sector.
+    if (!wts($dskfile, $cat_trk, $cat_sec, $cat_buf)) {
+      print "Failed to write catalog sector $cat_trk $cat_sec!\n";
+    }
   }
 }
 
@@ -526,11 +546,29 @@ sub lock_file {
 
   my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
   if ($file->{'trk'}) {
-    ##FIXME
+    print "cat_trk=$cat_trk cat_sec=$cat_sec\n" if $debug;
+    dump_sec($cat_buf) if $debug;
+    my @bytes = unpack "C*", $cat_buf;
+
+    # 12 is number of bytes before file descriptive entries, 35 is length of file descriptive entry.
+    my $file_type = $bytes[13 + (($file->{'cat_offset'} - 1) * 35)];
+
+    print sprintf("cat_offset=%d\n", $file->{'cat_offset'}) if $debug;
+    print sprintf("file_type=%02x\n", $file_type) if $debug;
 
     # Mark file as locked.
+    my $new_file_type = $bytes[13 + (($file->{'cat_offset'} - 1) * 35)] | 0x80;
+    print sprintf("new_file_type=%02x\n", $new_file_type) if $debug;
+    $bytes[13 + (($file->{'cat_offset'} - 1) * 35)] = $new_file_type;
 
+    # Re-pack the data in the sector.
+    $cat_buf = pack "C*", @bytes;
+
+    dump_sec($cat_buf) if $debug;
     # Write back catalog sector.
+    if (!wts($dskfile, $cat_trk, $cat_sec, $cat_buf)) {
+      print "Failed to write catalog sector $cat_trk $cat_sec!\n";
+    }
   }
 }
 
