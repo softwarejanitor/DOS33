@@ -55,8 +55,8 @@ while (defined $ARGV[0] && $ARGV[0] =~ /^-/) {
   }
 }
 
-my $pofile = shift or die "Must supply filename\n";
-my $filename = shift or die "Must supply filename\n";
+my $pofile = shift or die "Must supply .po filename\n";
+my $filename = shift or die "Must supply filename (on disk image)\n";
 
 read_file($pofile, $filename, $mode, $conv, $debug);
 

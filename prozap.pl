@@ -51,7 +51,7 @@ while (defined $ARGV[0] && $ARGV[0] =~ /^-/) {
   }
 }
 
-my $pofile = shift or die "Must supply filename\n";
+my $pofile = shift or die "Must supply .po filename\n";
 die "Must supply block number 0-280\n" unless $blk >= 0 && $blk <= 280;
 
 $dst_blk = $blk unless $dst_blk >= 0;

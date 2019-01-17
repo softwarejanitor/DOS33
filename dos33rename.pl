@@ -1,11 +1,11 @@
 #!/usr/bin/perl -w
 
 #
-# dos33delete.pl:
+# dos33rename.pl:
 #
-# Utility to delete a file on an Apple II DOS 3.3 disk image.
+# Utility to rename a file on an Apple II DOS 3.3 disk image.
 #
-# 20190116 LSH
+# 20190117 LSH
 #
 
 use strict;
@@ -22,8 +22,9 @@ while (defined $ARGV[0] && $ARGV[0] =~ /^-/) {
 
 my $dskfile = shift or die "Must supply .dsk filename\n";
 my $filename = shift or die "Must supply filename (on disk image)\n";
+my $new_filename = shift or die "Must supply new filename\n";
 
-delete_file($dskfile, $filename, $debug);
+rename_file($dskfile, $filename, $new_filename, $debug);
 
 1;
 

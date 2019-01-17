@@ -27,7 +27,7 @@ while (defined $ARGV[0] && $ARGV[0] =~ /^-/) {
   }
 }
 
-my $pofile = shift or die "Must supply filename\n";
+my $pofile = shift or die "Must supply .po filename\n";
 
 cat($pofile, $debug);
 

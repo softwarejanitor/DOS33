@@ -55,8 +55,8 @@ while (defined $ARGV[0] && $ARGV[0] =~ /^-/) {
   }
 }
 
-my $dskfile = shift or die "Must supply filename\n";
-my $filename = shift or die "Must supply filename\n";
+my $dskfile = shift or die "Must supply .dsk filename\n";
+my $filename = shift or die "Must supply filename (on disk image)\n";
 
 read_file($dskfile, $filename, $mode, $conv, $debug);
 

@@ -63,7 +63,7 @@ while (defined $ARGV[0] && $ARGV[0] =~ /^-/) {
   }
 }
 
-my $dskfile = shift or die "Must supply filename\n";
+my $dskfile = shift or die "Must supply .dsk filename\n";
 die "Must supply track number 0-35\n" unless $trk >= 0 && $trk <= 35;
 die "Must supply sector number 0-16\n" unless $sec >= 0 && $sec <= 16;
 

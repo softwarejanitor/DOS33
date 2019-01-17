@@ -178,31 +178,31 @@ sub parse_cat_sec {
   my ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length);
   ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = parse_file_entry($first_file_desc_ent);
   if (defined $first_tslist_trk && $first_tslist_trk ne '') {
-    push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec };
+    push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec, 'cat_offset' => 1 };
   }
   ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = parse_file_entry($second_file_desc_ent);
   if (defined $first_tslist_trk && $first_tslist_trk ne '') {
-    push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec };
+    push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec, 'cat_offset' => 2 };
   }
   ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = parse_file_entry($third_file_desc_ent);
   if (defined $first_tslist_trk && $first_tslist_trk ne '') {
-    push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec };
+    push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec, 'cat_offset' => 3 };
   }
   ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = parse_file_entry($fourth_file_desc_ent);
   if (defined $first_tslist_trk && $first_tslist_trk ne '') {
-    push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec };
+    push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec, 'cat_offset' => 4 };
   }
   ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = parse_file_entry($fifth_file_desc_ent);
   if (defined $first_tslist_trk && $first_tslist_trk ne '') {
-    push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec };
+    push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec, 'cat_offset' => 5 };
   }
   ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = parse_file_entry($sixth_file_desc_ent);
   if (defined $first_tslist_trk && $first_tslist_trk ne '') {
-    push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec };
+    push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec, 'cat_offset' => 6 };
   }
   ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = parse_file_entry($seventh_file_desc_ent);
   if (defined $first_tslist_trk && $first_tslist_trk ne '') {
-    push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec };
+    push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec, 'cat_offset' => 7 };
   }
 
   return $trk_num_nxt_cat_sec, $sec_num_nxt_cat_sec, @files;
@@ -215,7 +215,7 @@ sub get_cat_sec {
   my $buf;
 
   if (rts($dskfile, $cat_trk, $cat_sec, \$buf)) {
-    return parse_cat_sec($buf);
+    return $buf, parse_cat_sec($buf);
   }
 
   return 0;
@@ -236,10 +236,11 @@ sub catalog {
   if (defined $trk_num_1st_cat_sec && $trk_num_1st_cat_sec ne '') {
     print sprintf("DISK VOLUME %d\n\n", $dsk_vol_num);
 
+    my $cat_buf;
     my ($next_cat_trk, $next_cat_sec) = ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec);
     my @files = ();
     do {
-      ($next_cat_trk, $next_cat_sec, @files) = get_cat_sec($dskfile, $next_cat_trk, $next_cat_sec);
+      ($cat_buf, $next_cat_trk, $next_cat_sec, @files) = get_cat_sec($dskfile, $next_cat_trk, $next_cat_sec);
       if (defined $next_cat_trk && $next_cat_trk ne '') {
         foreach my $file (@files) {
           display_file_entry($file->{'file_type'}, $file->{'filename'}, $file->{'file_length'});
@@ -425,6 +426,9 @@ sub get_tslist {
   return @secs;
 }
 
+#
+# Find a file in the catalog
+#
 sub find_file {
   my ($dskfile, $filename) = @_;
 
@@ -432,16 +436,17 @@ sub find_file {
 
   if (defined $trk_num_1st_cat_sec && $trk_num_1st_cat_sec ne '') {
     my ($next_cat_trk, $next_cat_sec) = ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec);
+    my $cat_buf;
     my @files = ();
     do {
-      ($next_cat_trk, $next_cat_sec, @files) = get_cat_sec($dskfile, $next_cat_trk, $next_cat_sec);
+      ($cat_buf, $next_cat_trk, $next_cat_sec, @files) = get_cat_sec($dskfile, $next_cat_trk, $next_cat_sec);
       if (defined $next_cat_trk && $next_cat_trk ne '') {
         foreach my $file (@files) {
           my $fn = $file->{'filename'};
           $fn =~ s/\s+$//g;
           if ($fn eq $filename) {
             #print "trk=$file->{'trk'} sec=$file->{'sec'}\n";
-            return $file->{'trk'}, $file->{'sec'};
+            return $file, $next_cat_trk, $next_cat_sec, $cat_buf;
           }
         }
       }
@@ -455,6 +460,9 @@ sub find_file {
   return 0;
 }
 
+#
+# Read a file
+#
 sub read_file {
   my ($dskfile, $filename, $mode, $conv, $dbg) = @_;
 
@@ -463,11 +471,11 @@ sub read_file {
 
   $debug = 1 if (defined $dbg && $dbg);
 
-  my ($trk, $sec) = find_file($dskfile, $filename);
-  if ($trk) {
+  my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
+  if ($file->{'trk'}) {
     my $buf;
 
-    my @secs = get_tslist($dskfile, $trk, $sec);
+    my @secs = get_tslist($dskfile, $file->{'trk'}, $file->{'sec'});
     foreach my $sec (@secs) {
       next if $sec->{'trk'} == 0 && $sec->{'sec'} == 0;
       #print "**** trk=$sec->{'trk'} sec=$sec->{'sec'}\n";
@@ -490,24 +498,78 @@ sub read_file {
   }
 }
 
+#
+# Unlock a file
+#
 sub unlock_file {
   my ($dskfile, $filename, $dbg) = @_;
 
   $debug = 1 if (defined $dbg && $dbg);
 
-  ##FIXME -- need to make find_file return catalog t/s & file offset.
+  my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
+  if ($file->{'trk'}) {
+    ##FIXME
+
+    # Mark file as unlocked.
+
+    # Write back catalog sector.
+  }
 }
 
+#
+# Lock a file
+#
 sub lock_file {
   my ($dskfile, $filename, $dbg) = @_;
 
   $debug = 1 if (defined $dbg && $dbg);
+
+  my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
+  if ($file->{'trk'}) {
+    ##FIXME
+
+    # Mark file as locked.
+
+    # Write back catalog sector.
+  }
 }
 
+#
+# Delete a file
+#
 sub delete_file {
   my ($dskfile, $filename, $dbg) = @_;
 
   $debug = 1 if (defined $dbg && $dbg);
+
+  my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
+  if ($file->{'trk'}) {
+    ##FIXME
+
+    # Mark file as deleted.
+
+    # Write back catalog sector.
+
+    # get the files t/s list and free those sectors
+  }
+}
+
+#
+# Rename a file
+#
+sub rename_file {
+  my ($dskfile, $filename, $new_filename, $dbg) = @_;
+
+  $debug = 1 if (defined $dbg && $dbg);
+
+  my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
+  if ($file->{'trk'}) {
+    ##FIXME
+
+    # Change filename
+
+    # Write back catalog sector.
+  }
 }
 
 1;

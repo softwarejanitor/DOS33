@@ -6,7 +6,7 @@ dos33read.pl -- mostly working for simple text files
 dos33write.pl
 dos33umlock.pl -- started
 dos33lock.pl -- started
-dos33rename.pl
+dos33rename.pl -- started
 dos33delete.pl -- started
 dos33copy.pl
 zap.pl -- partially working
@@ -14,4 +14,8 @@ prozap.pl -- partially working
 procat.pl -- partially working
 profree.pl -- partially working
 proread.pl -- partially working
+prowrite.pl
+prorename.pl
+prodelete.pl
+procopy.pl
 
