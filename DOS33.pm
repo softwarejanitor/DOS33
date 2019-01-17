@@ -610,5 +610,32 @@ sub rename_file {
   }
 }
 
+#
+# Copy a file
+#
+sub copy_file {
+  my ($dskfile, $filename, $new_filename, $dbg) = @_;
+
+  $debug = 1 if (defined $dbg && $dbg);
+
+  my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
+  if ($file->{'trk'}) {
+    ##FIXME
+
+  }
+}
+
+#
+# Write a file to disk image.
+#
+sub write_file {
+  my ($dskfile, $filename, $new_filename, $mode, $conv, $dbg) = @_;
+
+  $debug = 1 if (defined $dbg && $dbg);
+
+  ##FIXME
+}
+
+
 1;
 
