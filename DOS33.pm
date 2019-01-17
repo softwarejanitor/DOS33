@@ -412,7 +412,9 @@ sub get_tslist {
   my ($dskfile, $tslist_trk, $tslist_sec) = @_;
 
   my ($next_tslist_trk, $next_tslist_sec) = ($tslist_trk, $tslist_sec);
+
   my @secs = ();
+
   do {
     ($next_tslist_trk, $next_tslist_sec, @secs) = get_tslist_sec($dskfile, $next_tslist_trk, $next_tslist_sec);
     if (defined $next_tslist_trk && $next_tslist_trk ne '') {
@@ -459,9 +461,7 @@ sub read_file {
   $mode = '' unless defined $mode;
   $conv = 0 unless defined $conv;
 
-  if (defined $dbg && $dbg) {
-    $debug = 1;
-  }
+  $debug = 1 if (defined $dbg && $dbg);
 
   my ($trk, $sec) = find_file($dskfile, $filename);
   if ($trk) {
@@ -488,6 +488,26 @@ sub read_file {
       }
     }
   }
+}
+
+sub unlock_file {
+  my ($dskfile, $filename, $dbg) = @_;
+
+  $debug = 1 if (defined $dbg && $dbg);
+
+  ##FIXME -- need to make find_file return catalog t/s & file offset.
+}
+
+sub lock_file {
+  my ($dskfile, $filename, $dbg) = @_;
+
+  $debug = 1 if (defined $dbg && $dbg);
+}
+
+sub delete_file {
+  my ($dskfile, $filename, $dbg) = @_;
+
+  $debug = 1 if (defined $dbg && $dbg);
 }
 
 1;
