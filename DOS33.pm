@@ -474,7 +474,7 @@ sub read_file {
   $debug = 1 if (defined $dbg && $dbg);
 
   my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
-  if ($file->{'trk'}) {
+  if (defined $file && $file && $file->{'trk'}) {
     my $buf;
 
     my @secs = get_tslist($dskfile, $file->{'trk'}, $file->{'sec'});
@@ -509,7 +509,7 @@ sub unlock_file {
   $debug = 1 if (defined $dbg && $dbg);
 
   my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
-  if ($file->{'trk'}) {
+  if (defined $file && $file && $file->{'trk'}) {
     print "cat_trk=$cat_trk cat_sec=$cat_sec\n" if $debug;
     dump_sec($cat_buf) if $debug;
     my @bytes = unpack "C*", $cat_buf;
@@ -545,7 +545,7 @@ sub lock_file {
   $debug = 1 if (defined $dbg && $dbg);
 
   my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
-  if ($file->{'trk'}) {
+  if (defined $file && $file && $file->{'trk'}) {
     print "cat_trk=$cat_trk cat_sec=$cat_sec\n" if $debug;
     dump_sec($cat_buf) if $debug;
     my @bytes = unpack "C*", $cat_buf;
@@ -581,7 +581,7 @@ sub delete_file {
   $debug = 1 if (defined $dbg && $dbg);
 
   my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
-  if ($file->{'trk'}) {
+  if (defined $file && $file && $file->{'trk'}) {
     ##FIXME
 
     # Mark file as deleted.
@@ -600,13 +600,40 @@ sub rename_file {
 
   $debug = 1 if (defined $dbg && $dbg);
 
+  if (length($new_filename) > 30) {
+    print "Filename $new_filename too long\n";
+    return;
+  }
+
   my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
-  if ($file->{'trk'}) {
-    ##FIXME
+  if (defined $file && $file && $file->{'trk'}) {
+    print "cat_trk=$cat_trk cat_sec=$cat_sec\n" if $debug;
+    dump_sec($cat_buf) if $debug;
+    my @bytes = unpack "C*", $cat_buf;
+
+    my $fname_start = 14 + (($file->{'cat_offset'} - 1) * 35);
+    print sprintf("fname_start=%02x\n", $fname_start) if $debug;
 
     # Change filename
+    for (my $i = 0; $i < length($new_filename); $i++) {
+      # Set the high bit
+      $bytes[$fname_start + $i] = ord(substr($new_filename, $i, 1)) | 0x80;
+    }
+    # Make sure new filename is space padded
+    for (my $i = length($new_filename); $i < 30; $i++) {
+      # 0xa0 is Apple II space (high bit set)
+      $bytes[$fname_start + $i] = 0xa0;
+    }
+
+    # Re-pack the data in the sector.
+    $cat_buf = pack "C*", @bytes;
 
     # Write back catalog sector.
+    dump_sec($cat_buf) if $debug;
+    # Write back catalog sector.
+    if (!wts($dskfile, $cat_trk, $cat_sec, $cat_buf)) {
+      print "Failed to write catalog sector $cat_trk $cat_sec!\n";
+    }
   }
 }
 
@@ -619,7 +646,7 @@ sub copy_file {
   $debug = 1 if (defined $dbg && $dbg);
 
   my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
-  if ($file->{'trk'}) {
+  if (defined $file && $file && $file->{'trk'}) {
     ##FIXME
 
   }

@@ -3,10 +3,10 @@ TODO:
 catalog.pl -- mostly working
 freemap.pl -- mostly working
 dos33read.pl -- mostly working for simple text files
-dos33write.pl
+dos33write.pl -- started
 dos33umlock.pl -- mostly working
 dos33lock.pl -- mostly working
-dos33rename.pl -- started
+dos33rename.pl -- mostly working
 dos33delete.pl -- started
 dos33copy.pl -- started
 zap.pl -- partially working
