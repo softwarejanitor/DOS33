@@ -12,6 +12,8 @@ use strict;
 
 use DOS33;
 
+my $debug = 0;
+
 while (defined $ARGV[0] && $ARGV[0] =~ /^-/) {
   # Debug
   if ($ARGV[0] eq '-d') {
