@@ -241,7 +241,8 @@ sub catalog {
     my @files = ();
     do {
       ($cat_buf, $next_cat_trk, $next_cat_sec, @files) = get_cat_sec($dskfile, $next_cat_trk, $next_cat_sec);
-      if (defined $next_cat_trk && $next_cat_trk ne '') {
+      #if (defined $next_cat_trk && $next_cat_trk ne '') {
+      if (scalar @files) {
         foreach my $file (@files) {
           display_file_entry($file->{'file_type'}, $file->{'filename'}, $file->{'file_length'});
         }
@@ -360,6 +361,7 @@ sub parse_tslist_sec {
 #$tslist_fmt_tmpl = 'xCCx2vx5a122';
   my @secs = ();
 
+##FIXME -- tslist_fmt_tmpl should not have 122 hard coded, that value shoulc come from vtoc.
   my ($next_tslist_trk, $next_tslist_sec, $soffset, $tslist) = unpack $tslist_fmt_tmpl, $buf;
 
   if ($debug) {
@@ -442,7 +444,8 @@ sub find_file {
       my $cur_cat_trk = $next_cat_trk;
       my $cur_cat_sec = $next_cat_sec;
       ($cat_buf, $next_cat_trk, $next_cat_sec, @files) = get_cat_sec($dskfile, $next_cat_trk, $next_cat_sec);
-      if (defined $next_cat_trk && $next_cat_trk ne '') {
+      #if (defined $next_cat_trk && $next_cat_trk ne '') {
+      if (scalar @files) {
         foreach my $file (@files) {
           my $fn = $file->{'filename'};
           $fn =~ s/\s+$//g;
@@ -707,6 +710,36 @@ sub rename_file {
       print "Failed to write catalog sector $cat_trk $cat_sec!\n";
     }
   }
+}
+
+#
+# Find empty file descriptive entry for writing a file.
+#
+sub find_empty_file_desc_ent {
+  my ($dskfile) = @_;
+
+  my ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $bit_map_free_secs) = get_vtoc_sec($dskfile);
+
+  if (defined $trk_num_1st_cat_sec && $trk_num_1st_cat_sec ne '') {
+    my ($next_cat_trk, $next_cat_sec) = ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec);
+    my $cat_buf;
+    my @files = ();
+    do {
+      my $cur_cat_trk = $next_cat_trk;
+      my $cur_cat_sec = $next_cat_sec;
+      ($cat_buf, $next_cat_trk, $next_cat_sec, @files) = get_cat_sec($dskfile, $next_cat_trk, $next_cat_sec);
+      #if (defined $next_cat_trk && $next_cat_trk ne '') {
+      if (scalar @files) {
+##FIXME
+      }
+    } while ($next_cat_trk != 0);
+  } else {
+    return 0;
+  }
+
+  print "DISK FULL!\n";
+
+  return 0;
 }
 
 #
