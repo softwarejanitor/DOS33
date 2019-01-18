@@ -363,7 +363,7 @@ sub write_vtoc {
   # Re-pack vtoc sector, the double pack is to pad the sector with zero bytes.
   my $buf = pack "a$sec_size", pack $vtoc_fmt_tmpl, ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs);
 
-  print "Writing vtoc\n";
+  print "Writing vtoc\n" if $debug;
 
   if ($debug) {
     print "vtoc=";
@@ -377,10 +377,10 @@ sub write_vtoc {
   dump_sec($buf) if $debug;
 
   # Write back vtoc sector.
-  #if (!wts($dskfile, $vtoc_trk, $vtoc_sec, $buf)) {
-  #  print "Failed to write vtoc sector $vtoc_trk $vtoc_sec!\n";
-  #  return 0;
-  #}
+  if (!wts($dskfile, $vtoc_trk, $vtoc_sec, $buf)) {
+    print "Failed to write vtoc sector $vtoc_trk $vtoc_sec!\n";
+    return 0;
+  }
   return 1;
 }
 
@@ -632,14 +632,14 @@ sub delete_file {
 
   my ($file, $cat_trk, $cat_sec, $cat_buf) = find_file($dskfile, $filename);
   if (defined $file && $file && $file->{'trk'}) {
-    print "cat_trk=$cat_trk cat_sec=$cat_sec\n";
+    print "cat_trk=$cat_trk cat_sec=$cat_sec\n" if $debug;
     dump_sec($cat_buf) if $debug;
     my @bytes = unpack "C*", $cat_buf;
 
     # Mark file as deleted.
     # 11 is first tslist sector track
     my $first_tslist_sec_trk = $bytes[11 + (($file->{'cat_offset'} - 1) * 35)];
-    print sprintf("first_tslist_sec_trk=%02x\n", $first_tslist_sec_trk);
+    print sprintf("first_tslist_sec_trk=%02x\n", $first_tslist_sec_trk) if $debug;
     $bytes[11 + (($file->{'cat_offset'} - 1) * 35)] = 0x00;
     # Set last byte of filename to first tslist sector track
     $bytes[43 + (($file->{'cat_offset'} - 1) * 35)] = $first_tslist_sec_trk;
@@ -649,9 +649,9 @@ sub delete_file {
 
     dump_sec($cat_buf) if $debug;
     # Write back catalog sector.
-    #if (!wts($dskfile, $cat_trk, $cat_sec, $cat_buf)) {
-    #  print "Failed to write catalog sector $cat_trk $cat_sec!\n";
-    #}
+    if (!wts($dskfile, $cat_trk, $cat_sec, $cat_buf)) {
+      print "Failed to write catalog sector $cat_trk $cat_sec!\n";
+    }
 
     my ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs) = get_vtoc_sec($dskfile);
 
