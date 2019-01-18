@@ -902,6 +902,7 @@ sub write_file {
             $done = 1;
           }
         }
+        print sprintf("sectors_used=%04x\n", $sectors_used);
 
         # Number of tslists is number of sectors used / 121.
         my $num_tslists = ceil($sectors_used / 121);
@@ -995,8 +996,11 @@ sub write_file {
           $bytes[$fname_start + $i] = 0xa0;
         }
 
-        my $file_secs_lo = $sectors_used & 0xff00;
+        print sprintf("sectors_used=%04x\n", $sectors_used);
+        my $file_secs_lo = $sectors_used & 0x00ff;
+        print sprintf("file_secs_lo=%02x\n", $file_secs_lo);
         my $file_secs_hi = ($sectors_used & 0xff00) >> 8;
+        print sprintf("file_secs_hi=%02x\n", $file_secs_hi);
 
         # Set file length in sectors.
         my $file_length_secs = ceil($file_length / $sec_size);
