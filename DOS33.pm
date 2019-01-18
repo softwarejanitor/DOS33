@@ -12,6 +12,8 @@ package DOS33;
 
 use strict;
 
+use POSIX;
+
 use DSK;
 
 use Exporter::Auto;
@@ -839,56 +841,215 @@ sub write_file {
     # Find free sectors.
     my @free_secs = find_free_sectors($dskfile, $debug);
     if (scalar @free_secs) {
-      print "GOT HERE\n";
-      ##FIXME
+      my @used_secs = ();
+      my $sectors_used = 0;
+
+      my $buf;
 
       # Read input file a sector worth at a time.
-      ##FIXME
+      my $file_length = 0;
 
-      # Initialize sector buffer.
-      my $buf = pack "C*", 0x00 x 256;
+      my $ifh;
 
-      # Create t/s list(s).
-      my $tslist_buf = pack "C*", 0x00 x 256;
+      if (open($ifh, "<$filename")) {
+        my $done = 0;
+        my $error = 0;
+        while (! $done) {
+          # Initialize sector buffer.
+          $buf = pack "C*", 0x00 x $sec_size;
 
-      dump_sec($cat_buf) if $debug;
-      my @bytes = unpack "C*", $cat_buf;
+          # Read a sectors worth of data.
+          my $bytes_read = read($ifh, $buf, $sec_size);
+          print "Read $bytes_read bytes\n";
+          if ($bytes_read < $sec_size) {
+            # Last sector
+            $done = 1;
+          }
 
-      # Create file descriptive entry in catalog.
+          # Keep track of file size.
+          $file_length += $bytes_read;
 
-      # Handle Filename
-      my $fname_start = 14 + (($empty_file_entry - 1) * 35);
-      print sprintf("fname_start=%02x\n", $fname_start) if $debug;
+          # Pop a sector from the free sector list.
+          my $next_sec;
+          if (scalar @free_secs) {
+            $next_sec = pop @free_secs;
+            print "Next free sector is trk $next_sec->{'trk'} sec $next_sec->{'sec'}\n";
+            # Push it onto the used sector list.
+            push @used_secs, { $next_sec->{'trk'}, $next_sec->{'sec'} };
 
-      # Put in the filename
-      for (my $i = 0; $i < length($filename); $i++) {
-        # Set the high bit
-        $bytes[$fname_start + $i] = ord(substr($filename, $i, 1)) | 0x80;
+            # Write the data to the next sector.
+            print "Writing trk $next_sec->{'trk'} sec $next_sec->{'sec'}\n";
+            #if (!wts($dskfile, $next_sec->{'trk'}, $next_sec->{'sec'}, $buf)) {
+            #  print "Failed to write sector $next_sec{'trk'} $next_sec{'sec'}!\n";
+            #}
+            $sectors_used++;
+          } else {
+            # Disk full.
+            print "DISK FULL!\n";
+            $error = 1;
+            $done = 1;
+          }
+        }
+
+        # Number of tslists is number of sectors used / 121.
+        my $num_tslists = ceil($sectors_used / 121);
+        print "Need $num_tslists tslist(s)\n";
+
+        # Create t/s list(s).
+        my $first_tslist_trk = 0;
+        my $first_tslist_sec = 0;
+
+        my @tslist_secs = ();
+        my $cur_tslist = 1;
+        for (my $ts = 0; $ts < $num_tslists; $ts++) {
+          my $next_sec;
+          if (scalar @free_secs) {
+            $next_sec = pop @free_secs;
+            print "Next free sector is trk $next_sec->{'trk'} sec $next_sec->{'sec'}\n";
+            if ($cur_tslist++ == 1) {
+              $first_tslist_trk = $next_sec->{'trk'};
+              $first_tslist_sec = $next_sec->{'sec'};
+            }
+
+            my $tslist_buf = pack "C*", 0x00 x $sec_size;
+
+            print "Writing tslist $ts\n";
+            ##FIXME
+            push @tslist_secs, { 'trk' => $next_sec->{'trk'}, 'sec' =>  $next_sec->{'sec'} };
+          } else {
+            print "DISK FULL!\n";
+            return;
+          }
+        }
+        print "first tslist trk $first_tslist_trk sec $first_tslist_sec\n";
+
+        dump_sec($cat_buf);
+        my @bytes = unpack "C*", $cat_buf;
+
+        # Create file descriptive entry in catalog.
+
+        # Set first tslist track.
+        $bytes[11 + (($empty_file_entry - 1) * 35)] = $first_tslist_trk;
+        # Set first tslist sector.
+        $bytes[12 + (($empty_file_entry - 1) * 35)] = $first_tslist_sec;
+
+        # Handle file type.
+        my $file_type = 0x00;  # Default T
+        if ($mode eq "I") {
+          $file_type = 0x01;
+        } elsif ($mode eq "A") {
+          $file_type = 0x02;
+        } elsif ($mode eq "B") {
+          $file_type = 0x04;
+        }
+
+        # Set file type
+        $bytes[13 + (($empty_file_entry - 1) * 35)] = $file_type;
+
+        # Handle Filename
+        my $fname_start = 14 + (($empty_file_entry - 1) * 35);
+        print sprintf("fname_start=%02x\n", $fname_start) if $debug;
+
+        # Put in the filename
+        for (my $i = 0; $i < length($filename); $i++) {
+          # Set the high bit
+          $bytes[$fname_start + $i] = ord(substr($filename, $i, 1)) | 0x80;
+        }
+        # Make sure new filename is space padded
+        for (my $i = length($filename); $i < 30; $i++) {
+          # 0xa0 is Apple II space (high bit set)
+          $bytes[$fname_start + $i] = 0xa0;
+        }
+
+        my $file_secs_lo = $sectors_used & 0xff00;
+        my $file_secs_hi = ($sectors_used & 0xff00) >> 8;
+
+        # Set file length in sectors.
+        my $file_length_secs = ceil($file_length / $sec_size);
+        $bytes[44 + (($empty_file_entry - 1) * 35)] = $file_secs_lo;
+        $bytes[45 + (($empty_file_entry - 1) * 35)] = $file_secs_hi;
+
+        # Re-pack the data in the catalog sector.
+        $cat_buf = pack "C*", @bytes;
+
+        dump_sec($cat_buf);
+        # Write back catalog sector with new file descriptive entry.
+        print "Writing catalog sector $cat_trk $cat_sec\n";
+        #if (!wts($dskfile, $cat_trk, $cat_sec, $cat_buf)) {
+        #  print "Failed to write catalog sector $cat_trk $cat_sec!\n";
+        #}
+
+        # Mark sectors used.
+        my ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs) = get_vtoc_sec($dskfile);
+
+        my $tmpl = '';
+        for (my $t = $min_trk; $t <= $max_trk; $t++) {
+          $tmpl .= $bit_map_free_sec_tmpl;
+        }
+
+        print "tmpl=$tmpl\n" if $debug;
+        my @flds = unpack $tmpl, $bit_map_free_secs;
+
+        if ($debug) {
+          for (my $t = $min_trk; $t <= $max_trk; $t++) {
+            print sprintf("%2d %04x\n", $t, $flds[$t]) if $debug;
+            print sprintf("%2d %016b\n", $t, $flds[$t]) if $debug;
+            my $fr = sprintf("%016b", $flds[$t]);
+            print "fr=$fr\n" if $debug;
+            my $fm = reverse $fr;
+            print "fm=$fm\n" if $debug;
+            $fm =~ s/0/ /g;
+            $fm =~ s/1/*/g;
+            print "fm=$fm\n" if $debug;
+            print sprintf("%2d|%s\n", $t, $fm);
+          }
+        }
+
+        # Mark sectors used
+        foreach my $sec (@used_secs) {
+          next unless defined $sec;
+          next unless defined $sec->{'trk'};
+          next if $sec->{'trk'} == 0 && $sec->{'sec'} == 0;
+          #print "trl=$sec->{'trk'} sec=$sec->{'sec'}\n";
+          my $fr = sprintf("%016b", $flds[$sec->{'trk'}]);
+          #print "fr=$fr\n";
+##FIXME
+          $flds[$sec->{'trk'}] |= (1 << $sec->{'sec'});
+          my $fr2 = sprintf("%016b", $flds[$sec->{'trk'}]);
+          #print "fr=$fr2\n";
+        }
+        ##FIXME -- mark tslist sectors used.
+        foreach my $sec (@tslist_secs) {
+          print "Marking tslist sector used trk $sec->{'trk'} sec $sec->{'sec'}\n";
+          #$flds[$trk] |= (& << $sec);
+        }
+
+        if ($debug) {
+          for (my $t = $min_trk; $t <= $max_trk; $t++) {
+            print sprintf("%2d %04x\n", $t, $flds[$t]) if $debug;
+            print sprintf("%2d %016b\n", $t, $flds[$t]) if $debug;
+            my $fr = sprintf("%016b", $flds[$t]);
+            print "fr=$fr\n" if $debug;
+            my $fm = reverse $fr;
+            print "fm=$fm\n" if $debug;
+            $fm =~ s/0/ /g;
+            $fm =~ s/1/*/g;
+            print "fm=$fm\n" if $debug;
+            print sprintf("%2d|%s\n", $t, $fm);
+          }
+        }
+
+        $bit_map_free_secs = pack $tmpl, @flds;
+
+        # Write back vtoc
+        #if (!write_vtoc($dskfile, $trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs)) {
+        #  print "I/O ERROR!\n";
+        #}
+
+        close $ifh;
+      } else {
+        print "Can't open $filename\n";
       }
-      # Make sure new filename is space padded
-      for (my $i = length($filename); $i < 30; $i++) {
-        # 0xa0 is Apple II space (high bit set)
-        $bytes[$fname_start + $i] = 0xa0;
-      }
-
-      # Fill in first tslist trk/sec in file descriptive entry.
-      my $first_tslist_trk = 0x00;
-      my $first_tslist_sec = 0x00;
-      my $file_type = 0x02;
-      my $file_length = 0x00;
-      ##FIXME
-
-      # Re-pack the data in the catalog sector.
-      $cat_buf = pack "C*", @bytes;
-
-      dump_sec($cat_buf) if $debug;
-      # Write back catalog sector with new file descriptive entry.
-      #if (!wts($dskfile, $cat_trk, $cat_sec, $cat_buf)) {
-      #  print "Failed to write catalog sector $cat_trk $cat_sec!\n";
-      #}
-
-      # Mark sectors used.
-      ##FIXME
     } else {
       print "DISK FULL\n";
     }
