@@ -356,18 +356,18 @@ sub get_vtoc_sec {
 }
 
 sub write_vtoc {
-  my ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs) = @_;
+  my ($dskfile, $trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs) = @_;
 
   # Re-pack vtoc sector
   my $buf = pack $vtoc_fmt_tmpl, ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs);
 
   # Write back vtoc sector.
-  #if (wts($dskfile, $vtoc_trk, $vtoc_sec, $buf)) {
-  #  return 1;
-  #} else {
-  #  print "Failed to write catalog sector $cat_trk $cat_sec!\n";
-  #  return 0;
-  #}
+  if (wts($dskfile, $vtoc_trk, $vtoc_sec, $buf)) {
+    return 1;
+  } else {
+    print "Failed to write vtoc sector $vtoc_trk $vtoc_sec!\n";
+    return 0;
+  }
 }
 
 #
@@ -561,7 +561,7 @@ sub unlock_file {
     print sprintf("new_file_type=%02x\n", $new_file_type) if $debug;
     $bytes[13 + (($file->{'cat_offset'} - 1) * 35)] = $new_file_type;
 
-    # Re-pack the data in the sector.
+    # Re-pack the data in the catalog sector.
     $cat_buf = pack "C*", @bytes;
 
     dump_sec($cat_buf) if $debug;
@@ -696,7 +696,7 @@ sub delete_file {
     $bit_map_free_secs = pack $tmpl, @flds;
 
     # Write back vtoc
-    if (!write_vtoc($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs)) {
+    if (!write_vtoc($dskfile, $trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs)) {
       print "I/O ERROR!\n";
     }
   }
@@ -735,7 +735,7 @@ sub rename_file {
       $bytes[$fname_start + $i] = 0xa0;
     }
 
-    # Re-pack the data in the sector.
+    # Re-pack the data in the catalog sector.
     $cat_buf = pack "C*", @bytes;
 
     dump_sec($cat_buf) if $debug;
@@ -840,7 +840,6 @@ sub write_file {
     my @free_secs = find_free_sectors($dskfile, $debug);
     if (scalar @free_secs) {
       print "GOT HERE\n";
-      # Create file descriptive entry in catalog.
       ##FIXME
 
       # Read input file a sector worth at a time.
@@ -852,14 +851,41 @@ sub write_file {
       # Create t/s list(s).
       my $tslist_buf = pack "C*", 0x00 x 256;
 
+      dump_sec($cat_buf) if $debug;
+      my @bytes = unpack "C*", $cat_buf;
+
+      # Create file descriptive entry in catalog.
+
+      # Handle Filename
+      my $fname_start = 14 + (($empty_file_entry - 1) * 35);
+      print sprintf("fname_start=%02x\n", $fname_start) if $debug;
+
+      # Put in the filename
+      for (my $i = 0; $i < length($filename); $i++) {
+        # Set the high bit
+        $bytes[$fname_start + $i] = ord(substr($filename, $i, 1)) | 0x80;
+      }
+      # Make sure new filename is space padded
+      for (my $i = length($filename); $i < 30; $i++) {
+        # 0xa0 is Apple II space (high bit set)
+        $bytes[$fname_start + $i] = 0xa0;
+      }
+
       # Fill in first tslist trk/sec in file descriptive entry.
+      my $first_tslist_trk = 0x00;
+      my $first_tslist_sec = 0x00;
+      my $file_type = 0x02;
+      my $file_length = 0x00;
       ##FIXME
+
+      # Re-pack the data in the catalog sector.
+      $cat_buf = pack "C*", @bytes;
 
       dump_sec($cat_buf) if $debug;
       # Write back catalog sector with new file descriptive entry.
-      if (!wts($dskfile, $cat_trk, $cat_sec, $cat_buf)) {
-        print "Failed to write catalog sector $cat_trk $cat_sec!\n";
-      }
+      #if (!wts($dskfile, $cat_trk, $cat_sec, $cat_buf)) {
+      #  print "Failed to write catalog sector $cat_trk $cat_sec!\n";
+      #}
 
       # Mark sectors used.
       ##FIXME
