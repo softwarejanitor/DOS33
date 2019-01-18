@@ -175,37 +175,52 @@ sub parse_cat_sec {
 
   my @files = ();
 
+  my $empty_file_entry = 0;
   my ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length);
   ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = parse_file_entry($first_file_desc_ent);
   if (defined $first_tslist_trk && $first_tslist_trk ne '') {
     push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec, 'cat_offset' => 1 };
+  } else {
+    $empty_file_entry = 1;
   }
   ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = parse_file_entry($second_file_desc_ent);
   if (defined $first_tslist_trk && $first_tslist_trk ne '') {
     push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec, 'cat_offset' => 2 };
+  } else {
+    $empty_file_entry = 2 if $empty_file_entry == 0;
   }
   ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = parse_file_entry($third_file_desc_ent);
   if (defined $first_tslist_trk && $first_tslist_trk ne '') {
     push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec, 'cat_offset' => 3 };
+  } else {
+    $empty_file_entry = 3 if $empty_file_entry == 0;
   }
   ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = parse_file_entry($fourth_file_desc_ent);
   if (defined $first_tslist_trk && $first_tslist_trk ne '') {
     push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec, 'cat_offset' => 4 };
+  } else {
+    $empty_file_entry = 4 if $empty_file_entry == 0;
   }
   ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = parse_file_entry($fifth_file_desc_ent);
   if (defined $first_tslist_trk && $first_tslist_trk ne '') {
     push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec, 'cat_offset' => 5 };
+  } else {
+    $empty_file_entry = 5 if $empty_file_entry == 0;
   }
   ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = parse_file_entry($sixth_file_desc_ent);
   if (defined $first_tslist_trk && $first_tslist_trk ne '') {
     push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec, 'cat_offset' => 6 };
+  } else {
+    $empty_file_entry = 6 if $empty_file_entry == 0;
   }
   ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = parse_file_entry($seventh_file_desc_ent);
   if (defined $first_tslist_trk && $first_tslist_trk ne '') {
     push @files, { 'file_type' => $file_type, 'filename' => $filename, 'file_length' => $file_length, 'trk' => $first_tslist_trk, 'sec' => $first_tslist_sec, 'cat_offset' => 7 };
+  } else {
+    $empty_file_entry = 7 if $empty_file_entry == 0;
   }
 
-  return $trk_num_nxt_cat_sec, $sec_num_nxt_cat_sec, @files;
+  return $trk_num_nxt_cat_sec, $sec_num_nxt_cat_sec, $empty_file_entry, @files;
 }
 
 # Get catalog sector
@@ -239,8 +254,9 @@ sub catalog {
     my $cat_buf;
     my ($next_cat_trk, $next_cat_sec) = ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec);
     my @files = ();
+    my $empty_file_entry;
     do {
-      ($cat_buf, $next_cat_trk, $next_cat_sec, @files) = get_cat_sec($dskfile, $next_cat_trk, $next_cat_sec);
+      ($cat_buf, $next_cat_trk, $next_cat_sec, $empty_file_entry, @files) = get_cat_sec($dskfile, $next_cat_trk, $next_cat_sec);
       #if (defined $next_cat_trk && $next_cat_trk ne '') {
       if (scalar @files) {
         foreach my $file (@files) {
@@ -458,7 +474,8 @@ sub find_file {
     do {
       my $cur_cat_trk = $next_cat_trk;
       my $cur_cat_sec = $next_cat_sec;
-      ($cat_buf, $next_cat_trk, $next_cat_sec, @files) = get_cat_sec($dskfile, $next_cat_trk, $next_cat_sec);
+      my $empty_file_entry;
+      ($cat_buf, $next_cat_trk, $next_cat_sec, $empty_file_entry, @files) = get_cat_sec($dskfile, $next_cat_trk, $next_cat_sec);
       #if (defined $next_cat_trk && $next_cat_trk ne '') {
       if (scalar @files) {
         foreach my $file (@files) {
@@ -733,7 +750,9 @@ sub rename_file {
 # Find empty file descriptive entry for writing a file.
 #
 sub find_empty_file_desc_ent {
-  my ($dskfile) = @_;
+  my ($dskfile, $dbg) = @_;
+
+  $debug = 1 if (defined $dbg && $dbg);
 
   my ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $bit_map_free_secs) = get_vtoc_sec($dskfile);
 
@@ -741,22 +760,51 @@ sub find_empty_file_desc_ent {
     my ($next_cat_trk, $next_cat_sec) = ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec);
     my $cat_buf;
     my @files = ();
+    my $empty_file_entry;
     do {
       my $cur_cat_trk = $next_cat_trk;
       my $cur_cat_sec = $next_cat_sec;
-      ($cat_buf, $next_cat_trk, $next_cat_sec, @files) = get_cat_sec($dskfile, $next_cat_trk, $next_cat_sec);
-      #if (defined $next_cat_trk && $next_cat_trk ne '') {
-      if (scalar @files) {
-##FIXME
-      }
+      ($cat_buf, $next_cat_trk, $next_cat_sec, $empty_file_entry, @files) = get_cat_sec($dskfile, $next_cat_trk, $next_cat_sec);
+      return ($cat_buf, $cur_cat_trk, $cur_cat_sec, $empty_file_entry) if $empty_file_entry > 0;
     } while ($next_cat_trk != 0);
   } else {
+    print "I/O ERROR!\n";
     return 0;
   }
 
   print "DISK FULL!\n";
 
   return 0;
+}
+
+#
+# Get a list of free sectors
+#
+sub find_free_sectors {
+  my ($dskfile, $dbg) = @_;
+
+  $debug = 1 if (defined $dbg && $dbg);
+
+  my ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs) = get_vtoc_sec($dskfile);
+
+  my @secs = ();
+
+  my $tmpl = '';
+  for (my $t = $min_trk; $t <= $max_trk; $t++) {
+    $tmpl .= $bit_map_free_sec_tmpl;
+  }
+  print "tmpl=$tmpl\n" if $debug;
+  my @flds = unpack $tmpl, $bit_map_free_secs;
+  for (my $t = $min_trk; $t <= $max_trk; $t++) {
+    for (my $s = 0; $s < 16; $s++) {
+      if ($flds[$t] & 1 << $s) {
+        print "Free $t $s\n" if $debug;
+        push @secs, { 'trk' => $t, 'sec' => $s };
+      }
+    }
+  }
+
+  return @secs;
 }
 
 #
@@ -782,7 +830,45 @@ sub write_file {
 
   $debug = 1 if (defined $dbg && $dbg);
 
-  ##FIXME
+  # Find empty catalog file descriptive entry.
+  my ($cat_buf, $cat_trk, $cat_sec, $empty_file_entry) = find_empty_file_desc_ent($dskfile);
+
+  print "cat_trk=$cat_trk cat_sec=$cat_sec empty_file_entry=$empty_file_entry\n" if $debug;
+
+  if ($empty_file_entry) {
+    # Find free sectors.
+    my @free_secs = find_free_sectors($dskfile, $debug);
+    if (scalar @free_secs) {
+      print "GOT HERE\n";
+      # Create file descriptive entry in catalog.
+      ##FIXME
+
+      # Read input file a sector worth at a time.
+      ##FIXME
+
+      # Initialize sector buffer.
+      my $buf = pack "C*", 0x00 x 256;
+
+      # Create t/s list(s).
+      my $tslist_buf = pack "C*", 0x00 x 256;
+
+      # Fill in first tslist trk/sec in file descriptive entry.
+      ##FIXME
+
+      dump_sec($cat_buf) if $debug;
+      # Write back catalog sector with new file descriptive entry.
+      if (!wts($dskfile, $cat_trk, $cat_sec, $cat_buf)) {
+        print "Failed to write catalog sector $cat_trk $cat_sec!\n";
+      }
+
+      # Mark sectors used.
+      ##FIXME
+    } else {
+      print "DISK FULL\n";
+    }
+  } else {
+    print "DISK FULL\n";
+  }
 }
 
 1;
