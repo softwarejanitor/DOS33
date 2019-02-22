@@ -31,7 +31,19 @@ my $vtoc_sec = 0x00;  # Default VTOC sector
 
 # DOS 3.3 file types
 my %file_types = (
-  0x00 => ' T',  # Unlocked text file
+  0x00 => ' T',  # Text file
+  0x01 => ' I',  # INTBASIC file
+  0x02 => ' A',  # Applesoft file
+  0x04 => ' B',  # Binary file
+  0x08 => ' S',  # Special file
+  0x10 => ' R',  # Relocatable file
+  0x20 => ' A',  # A file
+  0x40 => ' B',  # B file
+);
+
+# DOS 3.3 file types (display)
+my %disp_file_types = (
+  0x00 => ' T',  # Unlocked Text file
   0x01 => ' I',  # Unlocked INTBASIC file
   0x02 => ' A',  # Unlocked Applesoft file
   0x04 => ' B',  # Unlocked Binary file
@@ -47,6 +59,26 @@ my %file_types = (
   0x90 => '*R',  # Locked Relocatable file
   0xa0 => '*A',  # Locked A file
   0xb0 => '*B',  # Locked B file
+);
+
+# For free space counts.
+my %ones_count = (
+  0x00 => 0,  # 0000
+  0x01 => 1,  # 0001
+  0x02 => 1,  # 0010
+  0x03 => 2,  # 0011
+  0x04 => 1,  # 0100
+  0x05 => 2,  # 0101
+  0x06 => 2,  # 0110
+  0x07 => 3,  # 0111
+  0x08 => 1,  # 1000
+  0x09 => 2,  # 1001
+  0x0a => 2,  # 1010
+  0x0b => 3,  # 1011
+  0x0c => 2,  # 1100
+  0x0d => 3,  # 1101
+  0x0e => 3,  # 1110
+  0x0f => 4,  # 1111
 );
 
 #
@@ -140,7 +172,7 @@ my %dsk = ();  # Memory for disk image.
 sub display_file_entry {
   my ($file_type, $filename, $file_length) = @_;
 
-  print sprintf("%-2s %03d %s\n", $file_types{$file_type}, $file_length, $filename);
+  print sprintf("%-2s %03d %s\n", $disp_file_types{$file_type}, $file_length, $filename);
 }
 
 # Parse a file entry
@@ -149,9 +181,9 @@ sub parse_file_entry {
 
   my ($first_tslist_trk, $first_tslist_sec, $file_type, $filename, $file_length) = unpack $file_desc_ent_dmt_tmpl, $file_desc_entry;
 
-  return if $first_tslist_trk eq '';
-  return if $first_tslist_trk == 0xff;  # Deleted
-  return if $first_tslist_trk == 0x00;  # Never used
+  return undef if $first_tslist_trk eq '';
+  return undef if $first_tslist_trk == 0xff;  # Deleted
+  return undef if $first_tslist_trk == 0x00;  # Never used
 
   $file_length = 0 unless defined $file_length;
 
@@ -274,6 +306,37 @@ sub catalog {
 }
 
 #
+# Calculate free space
+#
+sub freespace {
+  my ($dskfile, $dbg) = @_;
+
+  if (defined $dbg && $dbg) {
+    $debug = 1;
+  }
+
+  my ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs) = get_vtoc_sec($dskfile);
+
+  my $tmpl = '';
+  for (my $t = $min_trk; $t <= $max_trk; $t++) {
+    $tmpl .= $bit_map_free_sec_tmpl;
+  }
+
+  my $free_sectors = 0;
+  my @flds = unpack $tmpl, $bit_map_free_secs;
+  for (my $t = $min_trk; $t <= $max_trk; $t++) {
+    $free_sectors += $ones_count{($flds[$t] >> 12)};  # Sectors fdec
+    $free_sectors += $ones_count{($flds[$t] >> 8) & 0x0f};  # Sectors ba98
+    $free_sectors += $ones_count{($flds[$t] >> 4) & 0x0f};  # Sectors 7654
+    $free_sectors += $ones_count{$flds[$t] & 0x0f};  # Sectors 3210
+  }
+
+  #print "$free_sectors sectors free\n";
+
+  return $free_sectors;
+}
+
+#
 # Display sector free map
 #
 sub freemap {
@@ -292,6 +355,7 @@ sub freemap {
     $tmpl .= $bit_map_free_sec_tmpl;
   }
   print "tmpl=$tmpl\n" if $debug;
+  my $free_sectors = 0;
   my @flds = unpack $tmpl, $bit_map_free_secs;
   for (my $t = $min_trk; $t <= $max_trk; $t++) {
     print sprintf("%2d %04x\n", $t, $flds[$t]) if $debug;
@@ -304,13 +368,20 @@ sub freemap {
     $fm =~ s/1/*/g;
     print "fm=$fm\n" if $debug;
     print sprintf("%2d|%s\n", $t, $fm);
+
+    $free_sectors += $ones_count{($flds[$t] >> 12)};  # Sectors fdec
+    $free_sectors += $ones_count{($flds[$t] >> 8) & 0x0f};  # Sectors ba98
+    $free_sectors += $ones_count{($flds[$t] >> 4) & 0x0f};  # Sectors 7654
+    $free_sectors += $ones_count{$flds[$t] & 0x0f};  # Sectors 3210
   }
   #print "bit_map_free_secs=";
   #my @bytes = unpack "C*", $bit_map_free_secs;
   #foreach my $byte (@bytes) {
   #  print sprintf("%02x ", $byte);
   #}
-  #print "\n";
+  print "\n";
+
+  print "$free_sectors sectors free\n";
 }
 
 # Parse a VTOC sector
@@ -381,6 +452,7 @@ sub write_vtoc {
     print "Failed to write vtoc sector $vtoc_trk $vtoc_sec!\n";
     return 0;
   }
+
   return 1;
 }
 
@@ -388,7 +460,7 @@ sub write_vtoc {
 # Parse a sector of a track/sector list
 #
 sub parse_tslist_sec {
-  my ($buf) = @_;
+  my ($buf, $num_secs) = @_;
 
   #dump_sec($buf);
 # Track/Sector ListFormat
@@ -409,14 +481,15 @@ sub parse_tslist_sec {
 ##FIXME -- tslist_fmt_tmpl should not have 122 hard coded, that value shoulc come from vtoc.
   my ($next_tslist_trk, $next_tslist_sec, $soffset, $tslist) = unpack $tslist_fmt_tmpl, $buf;
 
-  if ($debug) {
+  #if ($debug) {
+    print "num_secs=$num_secs\n";
     print "tslist=";
     my @bytes = unpack "C*", $tslist;
     foreach my $byte (@bytes) {
       print sprintf("%02x ", $byte);
     }
     print "\n";
-  }
+  #}
 
   my $tmpl = '';
   for (my $ts = 0; $ts < 122; $ts++) {
@@ -430,7 +503,7 @@ sub parse_tslist_sec {
     last unless defined $trk;
     last if $trk eq '';
     next if $trk == 0 && $sec == 0;
-    #print "trk=$trk sec=$sec\n";
+    print "Adding trk=$trk sec=$sec to tslist\n";
     unshift @secs, { 'trk' => $trk, 'sec' => $sec };
   }
 
@@ -441,13 +514,14 @@ sub parse_tslist_sec {
 # Get a sector of a track/sector list
 #
 sub get_tslist_sec {
-  my ($dskfile, $tslist_trk, $tslist_sec) = @_;
+  my ($dskfile, $tslist_trk, $tslist_sec, $num_secs) = @_;
 
   my $buf;
 
   if (rts($dskfile, $tslist_trk, $tslist_sec, \$buf)) {
-    dump_sec($buf) if $debug;
-    return parse_tslist_sec($buf);
+    #dump_sec($buf) if $debug;
+    dump_sec($buf);
+    return parse_tslist_sec($buf, $num_secs);
   }
 
   return 0;
@@ -457,15 +531,16 @@ sub get_tslist_sec {
 # Get a track/sector list
 #
 sub get_tslist {
-  my ($dskfile, $tslist_trk, $tslist_sec) = @_;
+  my ($dskfile, $tslist_trk, $tslist_sec, $num_secs) = @_;
 
   my ($next_tslist_trk, $next_tslist_sec) = ($tslist_trk, $tslist_sec);
 
   my @secs = ();
 
   do {
-    ($next_tslist_trk, $next_tslist_sec, @secs) = get_tslist_sec($dskfile, $next_tslist_trk, $next_tslist_sec);
+    ($next_tslist_trk, $next_tslist_sec, @secs) = get_tslist_sec($dskfile, $next_tslist_trk, $next_tslist_sec, $num_secs);
     if (defined $next_tslist_trk && $next_tslist_trk ne '') {
+      print "pushing trk $next_tslist_trk sec $next_tslist_sec\n";
       push @secs, { 'trk' => $next_tslist_trk, 'sec', $next_tslist_sec };
     }
   } while ($next_tslist_trk != 0);
@@ -526,7 +601,7 @@ sub read_file {
   if (defined $file && $file && $file->{'trk'}) {
     my $buf;
 
-    my @secs = get_tslist($dskfile, $file->{'trk'}, $file->{'sec'});
+    my @secs = get_tslist($dskfile, $file->{'trk'}, $file->{'sec'}, $file->{'file_length'});
     foreach my $sec (@secs) {
       next if $sec->{'trk'} == 0 && $sec->{'sec'} == 0;
       #print "**** trk=$sec->{'trk'} sec=$sec->{'sec'}\n";
@@ -679,10 +754,10 @@ sub delete_file {
     }
 
     # get the files t/s list and free those sectors
-    my @secs = get_tslist($dskfile, $file->{'trk'}, $file->{'sec'});
+    my @secs = get_tslist($dskfile, $file->{'trk'}, $file->{'sec'}, $file->{'file_length'});
     foreach my $sec (@secs) {
       next if $sec->{'trk'} == 0 && $sec->{'sec'} == 0;
-      #print "trl=$sec->{'trk'} sec=$sec->{'sec'}\n";
+      print "Freeing trk=$sec->{'trk'} sec=$sec->{'sec'}\n";
       my $fr = sprintf("%016b", $flds[$sec->{'trk'}]);
       #print "fr=$fr\n";
       $flds[$sec->{'trk'}] |= (1 << $sec->{'sec'});
@@ -844,6 +919,8 @@ sub write_file {
 
   $debug = 1 if (defined $dbg && $dbg);
 
+$debug = 1;
+
   # Find empty catalog file descriptive entry.
   my ($cat_buf, $cat_trk, $cat_sec, $empty_file_entry) = find_empty_file_desc_ent($dskfile);
 
@@ -851,9 +928,9 @@ sub write_file {
 
   if ($empty_file_entry) {
     # Find free sectors.
+    my @used_secs = ();
     my @free_secs = find_free_sectors($dskfile, $debug);
     if (scalar @free_secs) {
-      my @used_secs = ();
       my $sectors_used = 0;
 
       my $buf;
@@ -903,6 +980,7 @@ sub write_file {
           }
         }
         print sprintf("sectors_used=%04x\n", $sectors_used);
+        print sprintf("num_used_secs=%d\n", scalar @used_secs);
 
         # Number of tslists is number of sectors used / 121.
         my $num_tslists = ceil($sectors_used / 121);
@@ -941,7 +1019,19 @@ sub write_file {
               $soffset = pack "CCC", ($of1, $of2, $of3);
             }
             # Make data for this tslist sector -- hunks of 121 t/s pairs.
-            my @tsl = splice @used_secs, ($ts * 121), 121;
+            #print sprintf("\*\*\*\* num_used_secs=%d\n", scalar @used_secs);
+            #my @temp_used_secs = map { [@$_] } @used_secs;
+            #my @tsl = splice @temp_used_secs, ($ts * 121), 121;
+            #print sprintf("\*\*\*\* num_used_secs=%d\n", scalar @used_secs);
+            #print sprintf("num_secs_in_tsl_tsl=%d\n", scalar @tsl);
+            my @tsl = ();
+            for (my $cur_ts = $ts * 121; $cur_ts < ($ts * 121) + 121; $cur_ts++) {
+              print "cur_ts=$cur_ts\n";
+              last if $cur_ts > scalar @used_secs;
+              print "tsl trk $used_secs[$cur_ts]->{'trk'} sec $used_secs[$cur_ts]->{'sec'}\n";
+              push @tsl, { 'trk' => $used_secs[$cur_ts]->{'trk'}, 'sec' => $used_secs[$cur_ts]->{'sec'} };
+            }
+
             my $tslst_fmt = 'C' x 242;
             my $tslist = pack $tslst_fmt, @tsl;
             my $tslist_buf = pack "a$sec_size", pack $tslist_fmt_tmpl, ($next_tslist_trk, $next_tslist_sec, $soffset, $tslist);
@@ -1002,6 +1092,8 @@ sub write_file {
         my $file_secs_hi = ($sectors_used & 0xff00) >> 8;
         print sprintf("file_secs_hi=%02x\n", $file_secs_hi);
 
+        print sprintf("num_used_secs=%d\n", scalar @used_secs);
+
         # Set file length in sectors.
         my $file_length_secs = ceil($file_length / $sec_size);
         $bytes[44 + (($empty_file_entry - 1) * 35)] = $file_secs_lo;
@@ -1017,6 +1109,8 @@ sub write_file {
           print "Failed to write catalog sector $cat_trk $cat_sec!\n";
         }
 
+        print sprintf("num_used_secs=%d\n", scalar @used_secs);
+
         # Mark sectors used.
         my ($trk_num_1st_cat_sec, $sec_num_1st_cat_sec, $rel_num_dos, $dsk_vol_num, $max_tslist_secs, $last_trk_secs_alloc, $dir_trk_alloc, $num_trks_dsk, $num_secs_dsk, $num_bytes_sec, $bit_map_free_secs) = get_vtoc_sec($dskfile);
 
@@ -1028,10 +1122,12 @@ sub write_file {
         print "tmpl=$tmpl\n" if $debug;
         my @flds = unpack $tmpl, $bit_map_free_secs;
 
+        print sprintf("num_used_secs=%d\n", scalar @used_secs);
+
         # Mark sectors used
         foreach my $sec (@used_secs) {
           #next unless defined $sec;
-          #next unless defined $sec->{'trk'};
+          next unless defined $sec->{'trk'};
           #next if $sec->{'trk'} == 0 && $sec->{'sec'} == 0;
           print "Marking trk $sec->{'trk'} sec $sec->{'sec'} used\n" if $debug;
           $flds[$sec->{'trk'}] &= ~(1 << $sec->{'sec'});
