@@ -2,8 +2,8 @@
 
 #
 # dos33 version 0.1
-# by Vince Weaver <vince\@deater.net>
-# Perl port 20190225 by Leeland Heins <softwarejanitor\@yahoo.com>\n
+# by Vince Weaver <vince@deater.net>
+# Perl port 20190225 by Leeland Heins <softwarejanitor@yahoo.com>
 #
 
 use strict;
@@ -65,7 +65,7 @@ my $SEEK_SET = 0;
 
 my $VERSION = "0.1";
 
-# Helper Macros
+# Helper Subs
 sub TS_TO_INT {
   my ($x, $y) = @_;
 
@@ -183,7 +183,7 @@ sub dos33_char_to_type {
   return $result;
 }
 
-# dos33 filenames have top bit set on ascii chars
+# dos33 filenames have high bit set on ascii chars
 # and are padded with spaces
 sub dos33_filename_to_ascii {
   my ($dest, $src, $len) = @_;
@@ -247,7 +247,6 @@ sub dos33_free_space {
 
   return $sectors_free * $BYTES_PER_SECTOR;
 }
-
 
 # Get a T/S value from a Catalog Sector
 sub dos33_get_catalog_ts {
@@ -345,7 +344,6 @@ sub dos33_print_file_info {
   return 0;
 }
 
-
 # Checks if "filename" exists
 # returns entry/track/sector
 sub dos33_check_file_exists {
@@ -434,7 +432,6 @@ sub find_first_one {
 
   return $i;
 }
-
 
 sub dos33_free_sector {
   my ($fd, $track, $sector) = @_;
@@ -621,7 +618,6 @@ sub dos33_force_allocate_sector {
 
   return (($found_track << 8) + $found_sector);
 }
-
 
 my $ERROR_INVALID_FILENAME = 1;
 my $ERROR_FILE_NOT_FOUND = 2;
@@ -1194,7 +1190,6 @@ got_a_dentry:
   return 0;
 }
 
-
 # load a file.  fts=entry/track/sector
 sub dos33_load_file {
   my ($fd, $fts, $filename) = @_;
@@ -1429,7 +1424,6 @@ sub dos33_undelete_file {
   return 0;
 }
 
-
 sub dos33_delete_file {
   my ($fd, $fsl) = @_;
 
@@ -1526,7 +1520,6 @@ sub dump_sector {
 
   return 0;
 }
-
 
 sub dos33_dump {
   my ($fd) = @_;
