@@ -1157,5 +1157,31 @@ $debug = 1;
   }
 }
 
+#
+# Undelete a file
+#
+sub undelete_file {
+  my ($dskfile, $filename, $dbg) = @_;
+
+  $debug = 1 if (defined $dbg && $dbg);
+
+  print "dskfile=$dskfile filename=$filename\n";
+
+  return 1;
+}
+
+#
+# Initialize a disk image.
+#
+sub init {
+  my ($dskfile, $volume, $dbg) = @_;
+
+  $debug = 1 if (defined $dbg && $dbg);
+
+  print "dskfile=$dskfile volume=$volume\n";
+
+  return 1;
+}
+
 1;
 

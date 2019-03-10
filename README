@@ -4,10 +4,12 @@ catalog.pl -- mostly working
 freemap.pl -- mostly working
 dos33read.pl -- mostly working for simple text files
 dos33write.pl -- in progress
-dos33umlock.pl -- mostly working
+dos33unlock.pl -- mostly working
 dos33lock.pl -- mostly working
 dos33rename.pl -- mostly working
 dos33delete.pl -- in progress
 dos33copy.pl -- started
 zap.pl -- partially working
+dos33undelete.pl -- started
+dos33init.pl -- started
 
